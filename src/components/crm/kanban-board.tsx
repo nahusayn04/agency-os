@@ -161,43 +161,43 @@ const STAGE_COLORS: Record<
   { tab: string; badge: string; dot: string }
 > = {
   new_lead: {
-    tab: "text-blue-700",
-    badge: "bg-blue-50 text-blue-700 border-blue-200",
+    tab: "text-blue-700 dark:text-blue-400",
+    badge: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
     dot: "bg-blue-500",
   },
   call_pending: {
-    tab: "text-yellow-700",
-    badge: "bg-yellow-50 text-yellow-700 border-yellow-200",
+    tab: "text-yellow-700 dark:text-yellow-400",
+    badge: "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800",
     dot: "bg-yellow-500",
   },
   interested: {
-    tab: "text-purple-700",
-    badge: "bg-purple-50 text-purple-700 border-purple-200",
+    tab: "text-purple-700 dark:text-purple-400",
+    badge: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800",
     dot: "bg-purple-500",
   },
   hot_lead: {
-    tab: "text-amber-700",
-    badge: "bg-amber-50 text-amber-700 border-amber-200",
+    tab: "text-amber-700 dark:text-amber-400",
+    badge: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
     dot: "bg-amber-500",
   },
   meeting: {
-    tab: "text-cyan-700",
-    badge: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    tab: "text-cyan-700 dark:text-cyan-400",
+    badge: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800",
     dot: "bg-cyan-500",
   },
   negotiation: {
-    tab: "text-orange-700",
-    badge: "bg-orange-50 text-orange-700 border-orange-200",
+    tab: "text-orange-700 dark:text-orange-400",
+    badge: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800",
     dot: "bg-orange-500",
   },
   deal_won: {
-    tab: "text-green-700",
-    badge: "bg-green-50 text-green-700 border-green-200",
+    tab: "text-green-700 dark:text-green-400",
+    badge: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800",
     dot: "bg-green-500",
   },
   deal_lost: {
-    tab: "text-red-700",
-    badge: "bg-red-50 text-red-700 border-red-200",
+    tab: "text-red-700 dark:text-red-400",
+    badge: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
     dot: "bg-red-500",
   },
 };
@@ -424,14 +424,14 @@ function CallbackChip({
         className={
           "flex w-full flex-col items-center justify-center rounded-lg px-1 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 " +
           (bucket === "overdue"
-            ? "bg-red-50 text-red-600"
+            ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
             : bucket === "due_today"
-              ? "bg-orange-50 text-orange-600"
+              ? "bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
               : "bg-accent text-primary")
         }
       >
         <span>Callback</span>
-        <span className="whitespace-nowrap text-[10px] font-normal leading-tight opacity-60">
+        <span className="text-[10px] font-normal leading-tight opacity-60">
           {formatCallbackLabel(lead.next_followup) || "\u00A0"}
         </span>
       </button>
@@ -550,8 +550,8 @@ function MeetingChip({
       className={
         "text-[11px] px-1.5 py-1 rounded-md border transition-colors disabled:opacity-50 text-left w-full " +
         (overdue
-          ? "border-red-200 text-red-600 bg-red-50"
-          : "border-cyan-200 text-cyan-700 bg-cyan-50")
+          ? "border-red-200 text-red-600 bg-red-50 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
+          : "border-cyan-200 text-cyan-700 bg-cyan-50 dark:border-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300")
       }
     >
       <span className="block">
@@ -738,7 +738,7 @@ function LeadCard({
         (selected
           ? "border-primary bg-accent/40"
           : lead.is_hot_lead
-          ? "border-amber-300 bg-amber-50/60"
+          ? "border-amber-300 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-900/20"
           : "")
       }
     >
@@ -805,7 +805,7 @@ function LeadCard({
             href={"https://wa.me/" + toWhatsappNumber(lead.phone)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center rounded-lg bg-green-50 py-2 text-green-700"
+            className="flex items-center justify-center rounded-lg bg-green-50 py-2 text-green-700 dark:bg-green-900/30 dark:text-green-400"
           >
             WhatsApp
           </a>
@@ -1324,7 +1324,7 @@ export function KanbanBoard({
                   (active
                     ? "border-primary bg-primary text-primary-foreground"
                     : chip.value === "overdue"
-                    ? "border-red-200 bg-card text-red-600"
+                    ? "border-red-200 bg-card text-red-600 dark:border-red-800 dark:text-red-400"
                     : "border-border bg-card text-muted-foreground")
                 }
               >

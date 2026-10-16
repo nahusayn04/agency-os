@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUserProfile } from "@/lib/auth/session";
 import { getDashboardPathForRole } from "@/lib/auth/roles";
 import { NotificationBell } from "@/components/notification-bell";
-import { MessageDropdown } from "@/components/message-dropdown";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { GlobalSearch, MobileGlobalSearch } from "@/components/global-search";
 import Sidebar from "@/components/sidebar";
 import SidebarClient from "@/components/sidebar-client";
@@ -67,7 +67,7 @@ export default async function Header() {
           </div>
           <div className="flex items-center gap-3">
             <MobileGlobalSearch />
-            <MessageDropdown />
+            <ThemeToggle />
             <NotificationBell userId={profile.id} />
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
               <span className="text-xs font-semibold">

@@ -80,7 +80,7 @@ export default async function CrmPage({
       </div>
 
       {searchParams?.error && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400">
           {searchParams.error}
         </p>
       )}
