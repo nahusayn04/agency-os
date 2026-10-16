@@ -153,43 +153,43 @@ const STAGE_COLORS: Record<
   { tab: string; badge: string; dot: string }
 > = {
   new_lead: {
-    tab: "border-blue-500 text-blue-400",
-    badge: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    tab: "text-blue-700",
+    badge: "bg-blue-50 text-blue-700 border-blue-200",
     dot: "bg-blue-500",
   },
   call_pending: {
-    tab: "border-yellow-500 text-yellow-400",
-    badge: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+    tab: "text-yellow-700",
+    badge: "bg-yellow-50 text-yellow-700 border-yellow-200",
     dot: "bg-yellow-500",
   },
   interested: {
-    tab: "border-purple-500 text-purple-400",
-    badge: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    tab: "text-purple-700",
+    badge: "bg-purple-50 text-purple-700 border-purple-200",
     dot: "bg-purple-500",
   },
   hot_lead: {
-    tab: "border-amber-500 text-amber-400",
-    badge: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    tab: "text-amber-700",
+    badge: "bg-amber-50 text-amber-700 border-amber-200",
     dot: "bg-amber-500",
   },
   meeting: {
-    tab: "border-cyan-500 text-cyan-400",
-    badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    tab: "text-cyan-700",
+    badge: "bg-cyan-50 text-cyan-700 border-cyan-200",
     dot: "bg-cyan-500",
   },
   negotiation: {
-    tab: "border-orange-500 text-orange-400",
-    badge: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    tab: "text-orange-700",
+    badge: "bg-orange-50 text-orange-700 border-orange-200",
     dot: "bg-orange-500",
   },
   deal_won: {
-    tab: "border-emerald-500 text-emerald-400",
-    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    dot: "bg-emerald-500",
+    tab: "text-green-700",
+    badge: "bg-green-50 text-green-700 border-green-200",
+    dot: "bg-green-500",
   },
   deal_lost: {
-    tab: "border-red-500 text-red-400",
-    badge: "bg-red-500/10 text-red-400 border-red-500/20",
+    tab: "text-red-700",
+    badge: "bg-red-50 text-red-700 border-red-200",
     dot: "bg-red-500",
   },
 };
@@ -432,7 +432,7 @@ function LastContactChip({
               setOpen(false);
               onChange(new Date().toISOString());
             }}
-            className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-muted transition-colors font-medium text-emerald-400"
+            className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-muted transition-colors font-medium text-green-700"
           >
             ✓ Mark contacted today
           </button>
@@ -483,7 +483,7 @@ function NextFollowupChip({
         className={
           "text-[11px] px-1.5 py-0.5 rounded-md border transition-colors disabled:opacity-50 whitespace-nowrap " +
           (overdue
-            ? "border-red-500/30 text-red-400 bg-red-500/10"
+            ? "border-red-200 text-red-600 bg-red-50"
             : "border-transparent text-muted-foreground hover:text-foreground hover:border-border")
         }
       >
@@ -766,8 +766,8 @@ function MeetingChip({
       className={
         "text-[11px] px-1.5 py-1 rounded-md border transition-colors disabled:opacity-50 text-left w-full " +
         (overdue
-          ? "border-red-500/30 text-red-400 bg-red-500/10"
-          : "border-cyan-500/30 text-cyan-400 bg-cyan-500/10")
+          ? "border-red-200 text-red-600 bg-red-50"
+          : "border-cyan-200 text-cyan-700 bg-cyan-50")
       }
     >
       <span className="block">
@@ -944,23 +944,22 @@ function LeadCard({
     canDelete ? () => onRequestDelete(lead.id) : undefined,
     9000
   );
+  const detailHref = "/crm/" + lead.id;
 
   return (
     <div
       {...(canDelete ? longPress : {})}
       className={
-        "group relative glass-card rounded-xl p-4 space-y-3 min-w-0 transition-colors " +
+        "group relative min-w-0 space-y-3 rounded-2xl border bg-card p-3 shadow-card transition-colors " +
         (selected
-          ? "border-primary bg-primary/[0.04]"
+          ? "border-primary bg-accent/40"
           : lead.is_hot_lead
-          ? "border-amber-400/60 bg-amber-400/[0.04] hover:border-amber-400"
-          : "hover:border-primary/40")
+          ? "border-amber-300 bg-amber-50/60"
+          : "")
       }
     >
-      {/* Selection checkbox — hidden until selection mode is turned on via
-          the "Select" button in the filter bar, then visible on every
-          card. Never shown at all if the current user isn't allowed to
-          bulk-act on this lead (members + others' leads). */}
+      {/* Selection checkbox: only visible once selection mode is on, and
+          never for leads the current user can't bulk-act on. */}
       {canSelect && (
         <button
           type="button"
@@ -970,10 +969,10 @@ function LeadCard({
           }}
           aria-label={selected ? "Deselect lead" : "Select lead"}
           className={
-            "absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-md border transition-opacity " +
+            "absolute -left-1.5 -top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-md border transition-opacity " +
             (selected
               ? "opacity-100 bg-primary border-primary text-primary-foreground"
-              : "bg-background border-border " +
+              : "bg-card border-border " +
                 (selectionActive ? "opacity-100" : "opacity-0 pointer-events-none"))
           }
         >
@@ -985,79 +984,84 @@ function LeadCard({
         </button>
       )}
 
-      {/* Top row — name + move button */}
-      <div className="flex items-start justify-between gap-2">
-        <div className={"min-w-0" + (canSelect ? " pl-6" : "")}>
-          <p className="font-medium text-sm truncate">{lead.name}</p>
-
+      {/* Avatar + name / business / phone / value + hot star */}
+      <div className="flex items-start gap-3">
+        <Link
+          href={detailHref}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-base font-bold text-primary"
+        >
+          {(lead.name || "?").charAt(0).toUpperCase()}
+        </Link>
+        <div className="min-w-0 flex-1">
+          <Link href={detailHref} className="block truncate text-sm font-semibold">
+            {lead.name}
+          </Link>
           {lead.business_name && (
-            <p className="text-xs text-muted-foreground truncate">
-              {lead.business_name}
+            <p className="truncate text-xs text-muted-foreground">{lead.business_name}</p>
+          )}
+          {lead.phone && (
+            <p className="text-xs text-muted-foreground">{lead.phone}</p>
+          )}
+          {lead.deal_value != null && (
+            <p className="text-xs font-semibold text-primary">
+              {"$" + Number(lead.deal_value).toLocaleString()}
             </p>
           )}
-
-         {lead.phone && (
-  <div className="flex items-center gap-1.5 mt-0.5">
-    <a
-      href={"tel:" + lead.phone}
-      className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-    >
-      {"📞 " + lead.phone}
-    </a>
-              <a
-                href={"https://wa.me/" + toWhatsappNumber(lead.phone)}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Message on WhatsApp"
-                className="shrink-0 text-emerald-400 hover:text-emerald-300 transition-colors"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
-                >
-                  <path d="M12.04 2c-5.52 0-10 4.48-10 10 0 1.77.46 3.45 1.27 4.9L2 22l5.25-1.38a9.94 9.94 0 0 0 4.79 1.22h.01c5.52 0 10-4.48 10-10s-4.48-10-10-10Zm0 18.2a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-3.11.82.83-3.03-.2-.31A8.19 8.19 0 1 1 20.2 12a8.2 8.2 0 0 1-8.16 8.2Zm4.5-6.13c-.25-.12-1.45-.71-1.67-.79-.22-.08-.39-.12-.55.12-.16.25-.63.79-.77.95-.14.16-.28.18-.53.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.23-1.45-1.37-1.7-.14-.25-.02-.38.11-.5.11-.11.25-.28.37-.42.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.55-1.33-.76-1.82-.2-.48-.4-.41-.55-.42h-.47c-.16 0-.43.06-.66.31-.22.25-.86.85-.86 2.06 0 1.22.89 2.4 1.01 2.56.12.16 1.75 2.67 4.24 3.74.59.26 1.06.41 1.42.52.6.19 1.14.16 1.57.1.48-.07 1.45-.59 1.65-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.47-.28Z" />
-                </svg>
-              </a>
-            </div>
-          )}
         </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleHot(lead.id, !lead.is_hot_lead);
-            }}
-            disabled={pending}
-            title={lead.is_hot_lead ? "Unmark as hot lead" : "Mark as hot lead"}
-            aria-label={lead.is_hot_lead ? "Unmark as hot lead" : "Mark as hot lead"}
-            className={
-              "text-base leading-none transition-colors " +
-              (lead.is_hot_lead ? "text-amber-400" : "text-muted-foreground/40 hover:text-amber-300")
-            }
-          >
-            {lead.is_hot_lead ? "★" : "☆"}
-          </button>
-          <button
-            onClick={() => setShowMove((v) => !v)}
-            className="text-xs text-muted-foreground hover:text-foreground shrink-0 border rounded px-2 py-0.5 transition-colors"
-          >
-            Move
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleHot(lead.id, !lead.is_hot_lead);
+          }}
+          disabled={pending}
+          title={lead.is_hot_lead ? "Unmark as hot lead" : "Mark as hot lead"}
+          aria-label={lead.is_hot_lead ? "Unmark as hot lead" : "Mark as hot lead"}
+          className={
+            "shrink-0 text-xl leading-none transition-colors " +
+            (lead.is_hot_lead ? "text-amber-500" : "text-muted-foreground/40 hover:text-amber-400")
+          }
+        >
+          {lead.is_hot_lead ? "★" : "☆"}
+        </button>
       </div>
 
-      {/* Deal value + quick dates (left, stacked) / assignee (right) */}
+      {/* Quick actions */}
+      <div className="grid grid-cols-4 gap-1.5 text-center text-xs font-semibold">
+        {lead.phone ? (
+          <a href={"tel:" + lead.phone} className="rounded-lg bg-accent py-2 text-primary">
+            Call
+          </a>
+        ) : (
+          <span className="rounded-lg bg-muted py-2 text-muted-foreground/50">Call</span>
+        )}
+        {lead.phone ? (
+          <a
+            href={"https://wa.me/" + toWhatsappNumber(lead.phone)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg bg-green-50 py-2 text-green-700"
+          >
+            WhatsApp
+          </a>
+        ) : (
+          <span className="rounded-lg bg-muted py-2 text-muted-foreground/50">WhatsApp</span>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowMove((v) => !v)}
+          className="rounded-lg bg-accent py-2 text-primary"
+        >
+          Move
+        </button>
+        <Link href={detailHref} className="rounded-lg border py-2 text-muted-foreground">
+          Open
+        </Link>
+      </div>
+
+      {/* Dates, meeting, assignee */}
       <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col items-start gap-0.5 min-w-0">
-          {lead.deal_value != null && (
-            <span className="text-xs font-medium text-foreground">
-              {"$" + Number(lead.deal_value).toLocaleString()}
-            </span>
-          )}
+        <div className="flex min-w-0 flex-col items-start gap-0.5">
           <LastContactChip
             value={lead.last_contact}
             disabled={pending}
@@ -1080,7 +1084,7 @@ function LeadCard({
         {assigneeLocked ? (
           <span
             title="Assignee is locked once a lead leaves Call Pending"
-            className="flex items-center gap-1 text-xs text-muted-foreground max-w-[140px]"
+            className="flex max-w-[140px] items-center gap-1 text-xs text-muted-foreground"
           >
             <span className="truncate">🔒 {lead.assignee.name}</span>
           </span>
@@ -1092,7 +1096,7 @@ function LeadCard({
             onSelect={(userId) => onAssigneeChange(lead.id, userId)}
           />
         )}
-       </div>
+      </div>
 
       <NotePreview
         leadId={lead.id}
@@ -1101,9 +1105,9 @@ function LeadCard({
         onSave={onNoteChange}
       />
 
-      {/* Stage move dropdown */}
+      {/* Stage move chips */}
       {showMove && (
-        <div className="flex flex-wrap gap-1.5 pt-1 border-t">
+        <div className="flex flex-wrap gap-1.5 border-t pt-2">
           {stages
             .filter((s) => s !== lead.stage)
             .map((s) => (
@@ -1119,7 +1123,7 @@ function LeadCard({
                   }
                 }}
                 className={
-                  "text-xs px-2 py-0.5 rounded-full border transition-opacity " +
+                  "rounded-full border px-2.5 py-1 text-xs transition-opacity " +
                   STAGE_COLORS[s].badge +
                   " disabled:opacity-50"
                 }
@@ -1129,16 +1133,6 @@ function LeadCard({
             ))}
         </div>
       )}
-
-      {/* Edit link */}
-      <div className="flex justify-end pt-1 border-t">
-        <Link
-          href={"/crm/" + lead.id}
-          className="text-xs text-primary hover:underline shrink-0"
-        >
-          Edit →
-        </Link>
-      </div>
     </div>
   );
 }
@@ -1499,91 +1493,97 @@ export function KanbanBoard({
 
   const colors = STAGE_COLORS[activeStage];
 
+  const followupChips: { value: FollowupFilter; label: string }[] = [
+    { value: "all", label: "All" },
+    { value: "due_today", label: "Today" },
+    { value: "overdue", label: "Overdue" },
+    { value: "not_set", label: "Not set" },
+  ];
+
   return (
     <div className="space-y-4">
-      {/* Sticky filter bar + selection toolbar — pins just below the main
-          header (top-14 matches the header's h-14) so both stay visible
-          while scrolling through a long leads list. */}
-      <div className="sticky top-14 z-20 -mx-4 px-4 pb-3 pt-3 bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 border-b space-y-2">
-        {/* Global filters — apply across all 6 stages at once */}
-        <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, business, phone..."
-          className="glass-card w-full sm:w-56 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary"
-        />
+      {/* Sticky filter bar: search, follow-up chips, assignee, selection
+          toolbar. Stays pinned below the app header while scrolling. */}
+      <div className="sticky top-14 z-20 -mx-4 space-y-3 border-b bg-background/95 px-4 pb-3 pt-3 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, business, phone"
+            className="h-10 w-full rounded-xl border border-input bg-card px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:max-w-sm"
+          />
+          {!selectionActive && (
+            <button
+              type="button"
+              onClick={enterSelectionMode}
+              className="ml-auto flex h-10 shrink-0 items-center gap-1.5 rounded-xl border bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 11 12 14 20 6" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Select
+            </button>
+          )}
+        </div>
 
-        <Select
-          value={assignedToFilter}
-          onValueChange={(value) => setAssignedToFilter(value ?? "all")}
-          items={[
-            { value: "all", label: "All assignees" },
-            ...assignableUsers.map((u) => ({ value: u.id, label: u.name })),
-          ]}
-        >
-          <SelectTrigger className="text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All assignees</SelectItem>
-            {assignableUsers.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto">
+          {followupChips.map((chip) => {
+            const active = followupFilter === chip.value;
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => setFollowupFilter(chip.value)}
+                className={
+                  "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors " +
+                  (active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : chip.value === "overdue"
+                    ? "border-red-200 bg-card text-red-600"
+                    : "border-border bg-card text-muted-foreground")
+                }
+              >
+                {chip.label}
+              </button>
+            );
+          })}
 
-        <Select
-          value={followupFilter}
-          onValueChange={(v) => setFollowupFilter(v as FollowupFilter)}
-          items={[
-            { value: "all", label: "All follow-ups" },
-            { value: "overdue", label: "Overdue" },
-            { value: "due_today", label: "Due today" },
-            { value: "not_set", label: "Not set" },
-          ]}
-        >
-          <SelectTrigger className="text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All follow-ups</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-            <SelectItem value="due_today">Due today</SelectItem>
-            <SelectItem value="not_set">Not set</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {filtersActive && (
-          <button
-            type="button"
-            onClick={() => {
-              setSearch("");
-              setAssignedToFilter("all");
-              setFollowupFilter("all");
-            }}
-            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+          <Select
+            value={assignedToFilter}
+            onValueChange={(value) => setAssignedToFilter(value ?? "all")}
+            items={[
+              { value: "all", label: "All assignees" },
+              ...assignableUsers.map((u) => ({ value: u.id, label: u.name })),
+            ]}
           >
-            Clear filters
-          </button>
-        )}
+            <SelectTrigger className="h-8 shrink-0 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All assignees</SelectItem>
+              {assignableUsers.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {!selectionActive && (
-          <button
-            type="button"
-            onClick={enterSelectionMode}
-            className="ml-auto flex items-center gap-1.5 text-xs font-medium border rounded-md px-2.5 py-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 11 12 14 20 6" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Select
-          </button>
-        )}
-      </div>
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setAssignedToFilter("all");
+                setFollowupFilter("all");
+              }}
+              className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Clear
+            </button>
+          )}
+        </div>
 
       {/* Bulk selection toolbar */}
       {selectionActive && (
@@ -1654,8 +1654,8 @@ export function KanbanBoard({
       )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+      {/* Stage tabs */}
+      <div className="scrollbar-hide -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {stages.map((stage) => {
           const count = filteredItems.filter((l) => l.stage === stage).length;
           const isActive = stage === activeStage;
@@ -1666,28 +1666,18 @@ export function KanbanBoard({
               key={stage}
               onClick={() => setActiveStage(stage)}
               className={
-                "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all border " +
+                "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors " +
                 (isActive
-                  ? c.tab + " glass-card border-current"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50")
+                  ? "border-primary bg-primary text-primary-foreground shadow-card"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground")
               }
             >
-              <span
-                className={
-                  "h-2 w-2 rounded-full " +
-                  c.dot +
-                  (isActive ? "" : " opacity-50")
-                }
-              />
-
+              {!isActive && <span className={"h-2 w-2 rounded-full " + c.dot} />}
               {LEAD_STAGE_LABELS[stage]}
-
               <span
                 className={
-                  "rounded-full px-1.5 py-0.5 text-xs font-medium border " +
-                  (isActive
-                    ? c.badge
-                    : "bg-muted text-muted-foreground")
+                  "rounded-full px-1.5 text-[11px] " +
+                  (isActive ? "bg-white/25" : "bg-muted")
                 }
               >
                 {count}
@@ -1699,10 +1689,10 @@ export function KanbanBoard({
 
       {/* Active stage header */}
       <div className="flex items-center justify-between">
-        <h2 className={"font-semibold " + colors.tab}>
+        <h2 className={"flex items-center gap-2 font-semibold " + colors.tab}>
+          <span className={"h-2 w-2 rounded-full " + colors.dot} />
           {LEAD_STAGE_LABELS[activeStage]}
         </h2>
-
         <span className="text-sm text-muted-foreground">
           {visibleLeads.length +
             " lead" +
@@ -1712,7 +1702,7 @@ export function KanbanBoard({
 
       {/* Leads list */}
       {visibleLeads.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
           {filtersActive ? "No leads match these filters." : "No leads in this stage."}
         </div>
       ) : (

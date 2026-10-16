@@ -1,7 +1,7 @@
 import { requireUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import TaskCard from "@/components/tasks/task-card";
-import { Card } from "@/components/ui/card";
+import { TaskTabs } from "@/components/tasks/task-tabs";
 
 type TaskRow = {
   id: string;
@@ -55,84 +55,57 @@ export default async function MyTasksPage() {
     task.status === "approved" || task.status === "completed"
   );
 
+  const list = (items: TaskRow[]) => (
+    <div className="grid gap-3 md:grid-cols-2">
+      {items.map((t) => (
+        <TaskCard
+          key={t.id}
+          task={t}
+          assignerName={userMap.get(t.assigned_by)?.name}
+          assignerRole={userMap.get(t.assigned_by)?.role}
+        />
+      ))}
+    </div>
+  );
+
+  const groups = [
+    { label: "Active", items: activeTasks },
+    { label: "Pending", items: pendingTasks },
+    { label: "In Review", items: reviewTasks },
+    { label: "Done", items: doneTasks },
+  ];
+
+  const allContent = (
+    <div className="space-y-6">
+      {groups
+        .filter((g) => g.items.length > 0)
+        .map((g) => (
+          <section key={g.label} className="space-y-3">
+            <h2 className="text-sm font-semibold">{g.label}</h2>
+            {list(g.items)}
+          </section>
+        ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">My Tasks</h1>
-        <p className="text-muted-foreground">Tasks assigned to you for execution and submission.</p>
+        <p className="text-sm text-muted-foreground">
+          Tasks assigned to you for execution and submission.
+        </p>
       </div>
 
-      {activeTasks.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Active</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {activeTasks.map((t) => (
-              <Card key={t.id}>
-                <TaskCard
-                  task={t}
-                  assignerName={userMap.get(t.assigned_by)?.name}
-                  assignerRole={userMap.get(t.assigned_by)?.role}
-                />
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {pendingTasks.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Pending</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {pendingTasks.map((t) => (
-              <Card key={t.id}>
-                <TaskCard
-                  task={t}
-                  assignerName={userMap.get(t.assigned_by)?.name}
-                  assignerRole={userMap.get(t.assigned_by)?.role}
-                />
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {reviewTasks.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">In Review</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {reviewTasks.map((t) => (
-              <Card key={t.id}>
-                <TaskCard
-                  task={t}
-                  assignerName={userMap.get(t.assigned_by)?.name}
-                  assignerRole={userMap.get(t.assigned_by)?.role}
-                />
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {doneTasks.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-semibold">Done</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {doneTasks.map((t) => (
-              <Card key={t.id}>
-                <TaskCard
-                  task={t}
-                  assignerName={userMap.get(t.assigned_by)?.name}
-                  assignerRole={userMap.get(t.assigned_by)?.role}
-                />
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {rows.length === 0 && (
-        <p className="text-muted-foreground">No tasks assigned yet.</p>
-      )}
+      <TaskTabs
+        tabs={[
+          { key: "all", label: "All", count: rows.length, content: allContent },
+          { key: "active", label: "Active", count: activeTasks.length, content: list(activeTasks) },
+          { key: "pending", label: "Pending", count: pendingTasks.length, content: list(pendingTasks) },
+          { key: "review", label: "In Review", count: reviewTasks.length, content: list(reviewTasks) },
+          { key: "done", label: "Done", count: doneTasks.length, content: list(doneTasks) },
+        ]}
+      />
     </div>
   );
 }

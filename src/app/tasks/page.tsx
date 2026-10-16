@@ -1,20 +1,25 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { requireUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canManageTasks } from "@/lib/tasks/permissions";
-import { CreateTaskForm } from "@/components/tasks/create-task-form";
-import { CreateFlashTaskForm } from "@/components/tasks/create-flash-task-form";
-import { getAssignableMembers } from "@/lib/tasks/actions";
 import { PendingApprovalSection, type PendingApprovalTask } from "@/components/tasks/pending-approval-section";
-export default async function TasksPage() {
+
+export default async function TasksPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   const profile = await requireUserProfile();
   const supabase = createClient();
 
   const isFounder = profile.role === "super_admin";
   const adminClient = createAdminClient();
+  const canManage = canManageTasks(profile.role);
 
   let pendingApprovalTasks: PendingApprovalTask[] = [];
-  if (canManageTasks(profile.role)) {
+  if (canManage) {
     const reviewQuery = isFounder
       ? supabase
           .from("tasks")
@@ -65,34 +70,55 @@ export default async function TasksPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Page header: title on the left, round "+" on the right (opens the
+          New Task screen). Only people who can manage tasks get the "+". */}
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
           <p className="text-sm text-muted-foreground">
             Tasks assigned by or to you.
           </p>
         </div>
+        {canManage && (
+          <Link
+            href="/tasks/new"
+            aria-label="New task"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card transition-transform active:scale-95"
+          >
+            <Plus size={22} />
+          </Link>
+        )}
       </div>
 
-       {canManageTasks(profile.role) && (
-        <div>
-          <CreateTaskForm />
-        </div>
+      {searchParams?.error && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {searchParams.error}
+        </p>
       )}
 
-      {canManageTasks(profile.role) && (
-        <div>
-          <CreateFlashTaskForm assignableUsers={await getAssignableMembers()} />
-        </div>
-      )}
-
-      {canManageTasks(profile.role) && pendingApprovalTasks.length > 0 && (
+      {canManage && pendingApprovalTasks.length > 0 && (
         <PendingApprovalSection
           tasks={pendingApprovalTasks}
           isFounder={isFounder}
           currentUserId={profile.id}
         />
+      )}
+
+      {canManage && pendingApprovalTasks.length === 0 && (
+        <div className="rounded-2xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+          No tasks yet. Tap + to create one.
+        </div>
+      )}
+
+      {!canManage && (
+        <div className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground shadow-card">
+          Your assigned tasks are in{" "}
+          <Link href="/my-tasks" className="font-medium text-primary hover:underline">
+            My Tasks
+          </Link>
+          .
+        </div>
       )}
     </div>
   );

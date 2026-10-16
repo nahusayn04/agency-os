@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { requireUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getAssignableUsers } from "@/lib/crm/actions";
@@ -46,21 +47,52 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   const assignees = profile.role === "member" ? [] : await getAssignableUsers();
 
   return (
-    <div className="space-y-8">
-      <div>
-        <Link href="/crm" className="text-sm text-muted-foreground hover:underline">
-          ← Back to CRM
+    <div className="mx-auto max-w-2xl space-y-5">
+      <div className="relative flex items-center justify-center py-1">
+        <Link
+          href="/crm"
+          aria-label="Back to CRM"
+          className="absolute left-0 flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-accent"
+        >
+          <ArrowLeft size={20} />
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-          {lead.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {LEAD_STAGE_LABELS[lead.stage as LeadStage]}
-        </p>
+        <h1 className="text-lg font-semibold">Lead</h1>
       </div>
 
-      <section className="rounded-xl border p-6">
-        <h2 className="mb-4 font-medium">Lead details</h2>
+      {/* Profile block */}
+      <div className="rounded-2xl border bg-card p-4 text-center shadow-card">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent text-2xl font-bold text-primary">
+          {(lead.name || "?").charAt(0).toUpperCase()}
+        </div>
+        <h2 className="mt-2 text-lg font-semibold">{lead.name}</h2>
+        {lead.business_name && (
+          <p className="text-sm text-muted-foreground">{lead.business_name}</p>
+        )}
+        <span className="mt-2 inline-block rounded-full bg-accent px-3 py-0.5 text-xs font-medium text-primary">
+          {LEAD_STAGE_LABELS[lead.stage as LeadStage]}
+        </span>
+        {lead.phone && (
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm font-semibold">
+            <a
+              href={"tel:" + lead.phone}
+              className="rounded-xl bg-accent py-2 text-primary"
+            >
+              Call
+            </a>
+            <a
+              href={"https://wa.me/" + (lead.phone.replace(/\D/g, "").length === 10 ? "91" : "") + lead.phone.replace(/\D/g, "")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl bg-green-50 py-2 text-green-700"
+            >
+              WhatsApp
+            </a>
+          </div>
+        )}
+      </div>
+
+      <section className="rounded-2xl border bg-card p-4 shadow-card">
+        <h2 className="mb-4 text-sm font-semibold">Lead details</h2>
         <LeadEditForm
           lead={lead}
           assignedTo={lead.assigned_to}
@@ -70,13 +102,13 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
       </section>
 
       <section>
-        <h2 className="mb-4 font-medium">Audit trail</h2>
-        <ol className="space-y-3">
+        <h2 className="mb-3 text-sm font-semibold">History</h2>
+        <ol className="space-y-2 border-l-2 border-accent pl-4">
           {(audit ?? []).length === 0 ? (
             <li className="text-sm text-muted-foreground">No changes recorded.</li>
           ) : (
             (audit ?? []).map((entry) => (
-              <li key={entry.id} className="rounded-lg border p-3 text-sm">
+              <li key={entry.id} className="rounded-xl border bg-card p-3 text-sm shadow-card">
                 <p className="font-medium">
                   {changerMap.get(entry.changed_by) ?? "Unknown"} changed{" "}
                   <span className="font-mono">{entry.field_changed}</span>

@@ -1,11 +1,16 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { requireUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { KanbanBoard } from "@/components/crm/kanban-board";
-import { CreateLeadForm } from "@/components/crm/create-lead-form";
 import { getAssignableUsers } from "@/lib/crm/actions";
 import { LEAD_STAGES } from "@/lib/types/crm";
 
-export default async function CrmPage() {
+export default async function CrmPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   const profile = await requireUserProfile();
   const supabase = createClient();
 
@@ -55,17 +60,34 @@ export default async function CrmPage() {
   }));
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">CRM</h1>
-        <p className="text-sm text-muted-foreground">
-          {profile.role === "member"
-            ? "Your leads pipeline"
-            : "Team leads pipeline"}
-        </p>
+    <div className="space-y-4">
+      {/* Page header: title on the left, round "+" on the right (opens the
+          Add Lead screen). Members can't create leads, so no "+" for them. */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">CRM</h1>
+          <p className="text-sm text-muted-foreground">
+            {profile.role === "member"
+              ? "Your leads pipeline"
+              : "Team leads pipeline"}
+          </p>
+        </div>
+        {profile.role !== "member" && (
+          <Link
+            href="/crm/new"
+            aria-label="Add lead"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card transition-transform active:scale-95"
+          >
+            <Plus size={22} />
+          </Link>
+        )}
       </div>
 
-      {profile.role !== "member" && <CreateLeadForm />}
+      {searchParams?.error && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {searchParams.error}
+        </p>
+      )}
 
       <KanbanBoard
         leads={kanbanLeads}

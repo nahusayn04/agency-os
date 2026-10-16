@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 
 const DURATIONS = [2, 3, 4];
 
+const field =
+  "w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
+const section = "space-y-4 rounded-2xl border bg-card p-4 shadow-card";
+
 export function CreateFlashTaskForm({
   assignableUsers,
 }: {
@@ -27,95 +31,112 @@ export function CreateFlashTaskForm({
       const result = await createFlashTaskAction(formData);
       if (result?.error) setError(result.error);
       else {
-        (document.getElementById("flash-task-form") as HTMLFormElement)?.reset();
-        setDuration(2);
+        router.push("/tasks");
         router.refresh();
       }
     });
   }
 
+  const chip = (active: boolean) =>
+    "rounded-full border px-4 py-2 text-sm font-medium transition-colors " +
+    (active
+      ? "border-primary bg-primary text-primary-foreground shadow-card"
+      : "border-border bg-card text-muted-foreground hover:text-foreground");
+
   return (
-    <form id="flash-task-form" action={handleSubmit} className="space-y-3 glass-card rounded-xl p-4">
-      <p className="font-medium text-sm">⚡ Assign Flash Task (anytime, hour-based)</p>
-
-      <input
-        name="title"
-        placeholder="Task title"
-        required
-        className="w-full rounded-md border px-2 py-1.5 text-sm bg-background"
-      />
-      <textarea
-        name="description"
-        placeholder="Description (optional)"
-        rows={2}
-        className="w-full rounded-md border px-2 py-1.5 text-sm bg-background resize-none"
-      />
-
-      <select
-        name="assigned_to"
-        required
-        defaultValue=""
-        className="w-full rounded-md border px-2 py-1.5 text-sm bg-background"
-      >
-        <option value="" disabled>
-          Assign to…
-        </option>
-        {assignableUsers.map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.name}
-          </option>
-        ))}
-      </select>
-
-      <div className="flex gap-2 items-center flex-wrap">
-        {DURATIONS.map((d) => (
-          <button
-            key={d}
-            type="button"
-            onClick={() => {
-              setIsCustom(false);
-              setDuration(d);
-            }}
-            className={
-              "text-xs px-3 py-1.5 rounded-md border transition-colors " +
-              (!isCustom && duration === d
-                ? "bg-primary text-primary-foreground border-primary"
-                : "hover:bg-muted")
-            }
-          >
-            {d}h
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setIsCustom(true)}
-          className={
-            "text-xs px-3 py-1.5 rounded-md border transition-colors " +
-            (isCustom
-              ? "bg-primary text-primary-foreground border-primary"
-              : "hover:bg-muted")
-          }
-        >
-          Custom
-        </button>
-        {isCustom && (
+    <form id="flash-task-form" action={handleSubmit} className="space-y-4">
+      <section className={section}>
+        <h2 className="text-sm font-semibold">⚡ Flash task (anytime, hour-based)</h2>
+        <div className="space-y-2">
+          <label htmlFor="flash-title" className="text-sm font-medium">Title</label>
           <input
-            type="number"
-            min={1}
-            max={24}
-            step={0.5}
-            placeholder="Hours"
-            value={customHours}
-            onChange={(e) => setCustomHours(e.target.value)}
-            className="w-20 rounded-md border px-2 py-1.5 text-xs bg-background"
+            id="flash-title"
+            name="title"
+            placeholder="Task title"
+            required
+            className={field + " h-11"}
           />
-        )}
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="flash-desc" className="text-sm font-medium">Description</label>
+          <textarea
+            id="flash-desc"
+            name="description"
+            placeholder="Description (optional)"
+            rows={3}
+            className={field + " resize-none py-2"}
+          />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="flash-assignee" className="text-sm font-medium">Assign to</label>
+          <select
+            id="flash-assignee"
+            name="assigned_to"
+            required
+            defaultValue=""
+            className={field + " h-11"}
+          >
+            <option value="" disabled>
+              Select user
+            </option>
+            {assignableUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
 
-      <Button type="submit" disabled={pending}>
-        {pending ? "Assigning…" : "Assign Flash Task"}
-      </Button>
+      <section className={section}>
+        <h2 className="text-sm font-semibold">Duration</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {DURATIONS.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => {
+                setIsCustom(false);
+                setDuration(d);
+              }}
+              className={chip(!isCustom && duration === d)}
+            >
+              {d}h
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setIsCustom(true)}
+            className={chip(isCustom)}
+          >
+            Custom
+          </button>
+          {isCustom && (
+            <input
+              type="number"
+              min={1}
+              max={24}
+              step={0.5}
+              placeholder="Hours"
+              value={customHours}
+              onChange={(e) => setCustomHours(e.target.value)}
+              className={field + " h-10 w-24"}
+            />
+          )}
+        </div>
+      </section>
+
+      {error && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {error}
+        </p>
+      )}
+
+      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 -mx-4 border-t bg-card/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border">
+        <Button type="submit" disabled={pending} className="h-11 w-full">
+          {pending ? "Assigning…" : "Assign flash task"}
+        </Button>
+      </div>
     </form>
   );
 }

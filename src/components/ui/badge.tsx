@@ -2,8 +2,8 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const rose = "bg-rose-500/15 text-rose-300 border border-rose-500/20";
-const neutral = "bg-white/8 text-[#f0f0ff] border border-white/10";
+const rose = "bg-red-50 text-red-600 border border-red-200";
+const neutral = "bg-muted text-foreground border border-border";
 
 const badgeVariants = cva(
   "inline-flex w-fit shrink-0 items-center gap-1 rounded-full font-medium whitespace-nowrap transition-colors",
@@ -11,18 +11,18 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: neutral,
-        secondary: "bg-white/6 text-[#9494b8] border border-white/8",
-        violet: "bg-violet-500/15 text-violet-300 border border-violet-500/20",
-        cyan: "bg-cyan-500/15 text-cyan-300 border border-cyan-500/20",
-        emerald: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20",
-        amber: "bg-amber-500/15 text-amber-300 border border-amber-500/20",
+        secondary: "bg-muted text-muted-foreground border border-border",
+        violet: "bg-accent text-primary border border-primary/20",
+        cyan: "bg-cyan-50 text-cyan-700 border border-cyan-200",
+        emerald: "bg-green-50 text-green-700 border border-green-200",
+        amber: "bg-amber-50 text-amber-700 border border-amber-200",
         rose,
         destructive: rose,
-        orange: "bg-orange-500/15 text-orange-300 border border-orange-500/20",
-        pink: "bg-pink-500/15 text-pink-300 border border-pink-500/20",
-        outline: "border border-white/12 text-[#9494b8]",
-        ghost: "text-[#9494b8] bg-transparent",
-        link: "text-violet-400 underline-offset-4 hover:underline",
+        orange: "bg-orange-50 text-orange-700 border border-orange-200",
+        pink: "bg-pink-50 text-pink-700 border border-pink-200",
+        outline: "border border-border text-muted-foreground",
+        ghost: "text-muted-foreground bg-transparent",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         sm: "text-[10px] px-2 py-0.5",

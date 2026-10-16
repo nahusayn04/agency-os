@@ -4,38 +4,37 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const primary =
-  "bg-violet-600 hover:bg-violet-500 text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.4)]";
+  "bg-primary text-primary-foreground shadow-card hover:bg-primary/90";
 const danger =
-  "bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/20 hover:border-rose-500/40";
+  "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-1 focus-visible:ring-offset-[#080810] disabled:pointer-events-none disabled:opacity-40 select-none active:scale-[0.97] cursor-pointer [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40 select-none active:scale-[0.97] cursor-pointer [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         primary,
         default: primary,
-        secondary:
-          "bg-white/6 hover:bg-white/10 text-[#f0f0ff] border border-white/8 hover:border-white/14",
-        ghost: "hover:bg-white/6 text-[#9494b8] hover:text-[#f0f0ff]",
+        secondary: "bg-accent text-primary hover:bg-accent/70",
+        ghost: "text-muted-foreground hover:bg-accent hover:text-primary",
         danger,
         destructive: danger,
         success:
-          "bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20",
+          "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100",
         outline:
-          "border border-white/10 hover:border-white/20 text-[#9494b8] hover:text-[#f0f0ff] hover:bg-white/4",
-        link: "text-violet-400 hover:text-violet-300 underline-offset-4 hover:underline p-0 h-auto rounded-none",
+          "border border-input bg-card text-foreground hover:bg-accent hover:text-primary",
+        link: "text-primary underline-offset-4 hover:underline p-0 h-auto rounded-none",
       },
       size: {
         xs: "h-7 px-2.5 text-xs gap-1",
         sm: "h-8 px-3 text-sm",
-        md: "h-9 px-4 text-sm",
-        default: "h-9 px-4 text-sm",
-        lg: "h-10 px-5 text-sm",
-        xl: "h-11 px-6 text-[15px]",
-        icon: "h-9 w-9",
+        md: "h-10 px-4 text-sm",
+        default: "h-10 px-4 text-sm",
+        lg: "h-11 px-5 text-sm",
+        xl: "h-12 px-6 text-[15px]",
+        icon: "h-10 w-10",
         "icon-sm": "h-7 w-7",
-        "icon-lg": "h-10 w-10",
+        "icon-lg": "h-11 w-11",
       },
     },
     defaultVariants: {
