@@ -51,11 +51,14 @@ export default async function Header() {
   return (
     <>
       <Sidebar />
-      <header className="glass-card rounded-none border-x-0 border-t-0 lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out sticky top-0 z-30">
+      <header
+        className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-card lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      >
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <SidebarClient profile={{ id: profile.id, name: displayName, role: profile.role, email: profile.email, dashboardPath }} />
-            <Link href={dashboardPath} className="text-sm font-semibold text-white lg:hidden">
+            <Link href={dashboardPath} className="text-base font-semibold lg:hidden">
               Agency OS
             </Link>
           </div>
@@ -66,20 +69,20 @@ export default async function Header() {
             <MobileGlobalSearch />
             <MessageDropdown />
             <NotificationBell userId={profile.id} />
-            <div className="w-7 h-7 rounded-full bg-violet-500/20 flex items-center justify-center">
-              <span className="text-violet-300 text-xs font-semibold">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+              <span className="text-xs font-semibold">
                 {displayName.charAt(0).toUpperCase()}
               </span>
             </div>
-            <span className="text-sm text-white/50 hidden sm:block">{displayName}</span>
+            <span className="hidden text-sm text-white/80 sm:block">{displayName}</span>
           </div>
         </div>
       </header>
 
       {coldCallTask && !coldCallSubmitted && (
-        <div className="lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out sticky top-14 z-20 relative overflow-hidden border-b border-red-500/30 bg-red-950/60 px-3 py-1.5">
+        <div className="lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out sticky top-14 z-20 relative overflow-hidden border-b border-red-200 bg-red-50 px-3 py-1.5">
           <div className="cold-call-shine" />
-          <p className="relative mx-auto flex max-w-7xl items-center justify-center gap-1.5 truncate text-center text-sm font-semibold tracking-wide text-red-300">
+          <p className="relative mx-auto flex max-w-7xl items-center justify-center gap-1.5 truncate text-center text-sm font-semibold tracking-wide text-red-600">
             <svg
               className="cold-call-ring h-4 w-4 shrink-0"
               viewBox="0 0 24 24"

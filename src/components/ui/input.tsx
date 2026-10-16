@@ -1,22 +1,45 @@
 import * as React from "react";
-
 import { cn } from "@/lib/utils";
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
-    return (
-      <input
-        type={type}
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string;
+  error?: string;
+}
+
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ className, label, error, id, ...props }, ref) => {
+    const inputId = id ?? (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
+
+    const field = (
+      <textarea
+        id={inputId}
+        ref={ref}
         className={cn(
-          "glass-card flex h-10 w-full rounded-md px-3 py-2 text-sm ring-offset-transparent file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          "min-h-16 w-full resize-y rounded-[10px] border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-[#f0f0ff] placeholder:text-[#5e5e80] transition-all outline-none",
+          "focus:border-violet-500/60 focus:bg-white/6 focus:ring-2 focus:ring-violet-500/20",
+          "disabled:opacity-50 disabled:cursor-not-allowed",
+          error && "border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20",
           className
         )}
-        ref={ref}
         {...props}
       />
     );
+
+    if (!label && !error) return field;
+
+    return (
+      <div className="flex flex-col gap-1.5 w-full">
+        {label && (
+          <label htmlFor={inputId} className="text-sm font-medium text-[#f0f0ff]">
+            {label}
+          </label>
+        )}
+        {field}
+        {error && <p className="text-xs text-rose-400">{error}</p>}
+      </div>
+    );
   }
 );
-Input.displayName = "Input";
+Textarea.displayName = "Textarea";
 
-export { Input };
+export { Textarea };

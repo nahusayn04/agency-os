@@ -4,8 +4,8 @@
   "description": "Workforce management platform",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#080810",
+  "theme_color": "#080810",
   "icons": [
     {
       "src": "/N.png",

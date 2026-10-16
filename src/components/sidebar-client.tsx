@@ -2,13 +2,15 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { LayoutDashboard, ClipboardList, CheckSquare, BookUser, Mail, FileText, CalendarCheck, BarChart2, Target, Users, Wallet, X, Menu } from "lucide-react";
 
-export default function SidebarClient({ profile }: { 
-  profile: { id: string; name: string; role: string; email?: string; dashboardPath: string } 
+export default function SidebarClient({ profile }: {
+  profile: { id: string; name: string; role: string; email?: string; dashboardPath: string }
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   // Portals need document.body, which doesn't exist during SSR — only
   // render the portal once mounted on the client to avoid a hydration
   // mismatch.
@@ -31,75 +33,77 @@ export default function SidebarClient({ profile }: {
   const isFounder = profile.role === "super_admin";
   const showTasksLink = ["admin", "super_admin"].includes(profile.role || "");
 
-  const linkClass = "flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/40 hover:text-white/80 hover:bg-violet-500/10 transition-colors";
+  const NavItem = ({ href, icon: Icon, label }: { href: string; icon: typeof Menu; label: string }) => {
+    const active = pathname === href || pathname?.startsWith(href + "/");
+    return (
+      <Link
+        href={href}
+        onClick={() => setOpen(false)}
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+          active
+            ? "bg-accent font-semibold text-primary"
+            : "text-muted-foreground hover:bg-accent hover:text-primary"
+        }`}
+      >
+        <Icon size={18} /> {label}
+      </Link>
+    );
+  };
+
+  const sectionLabel = "px-3 pb-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground";
 
   const drawer = (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-      <aside className="glass-card absolute left-0 top-0 bottom-0 w-72 rounded-none border-y-0 border-l-0 flex flex-col">
-        <div className="flex items-center justify-between px-4 py-5 border-b border-white/10">
+      <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+      <aside className="absolute bottom-0 left-0 top-0 flex w-72 flex-col bg-card shadow-xl">
+        <div
+          className="flex items-start justify-between bg-primary px-4 pb-5 text-primary-foreground"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.25rem)" }}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-violet-500/20 flex items-center justify-center">
-              <span className="text-violet-300 text-xs font-bold">A</span>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-lg font-bold">
+              {(profile.name || "A").charAt(0).toUpperCase()}
             </div>
-            <span className="text-sm font-semibold text-white">Agency OS</span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{profile.name || "Agency OS"}</p>
+              {profile.email && <p className="truncate text-xs text-white/70">{profile.email}</p>}
+            </div>
           </div>
-          <button aria-label="Close menu" onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/80 transition-colors">
+          <button aria-label="Close menu" onClick={() => setOpen(false)} className="rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/10">
             <X size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <p className="text-[10px] text-white/25 uppercase tracking-widest px-3 pb-1">Main</p>
-          <Link href={profile.dashboardPath} onClick={() => setOpen(false)} className={linkClass}>
-            <LayoutDashboard size={15} /> Dashboard
-          </Link>
-          {showTasksLink && (
-            <Link href="/tasks" onClick={() => setOpen(false)} className={linkClass}>
-              <ClipboardList size={15} /> Tasks
-            </Link>
-          )}
-          <Link href="/my-tasks" onClick={() => setOpen(false)} className={linkClass}>
-            <CheckSquare size={15} /> My Tasks
-          </Link>
-          <Link href="/crm" onClick={() => setOpen(false)} className={linkClass}>
-            <BookUser size={15} /> CRM
-          </Link>
-          <Link href="/messages" onClick={() => setOpen(false)} className={linkClass}>
-            <Mail size={15} /> Messages
-          </Link>
-          <Link href="/reports" onClick={() => setOpen(false)} className={linkClass}>
-            <FileText size={15} /> Reports
-          </Link>
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+          <p className={sectionLabel}>Main</p>
+          <NavItem href={profile.dashboardPath} icon={LayoutDashboard} label="Dashboard" />
+          {showTasksLink && <NavItem href="/tasks" icon={ClipboardList} label="Tasks" />}
+          <NavItem href="/my-tasks" icon={CheckSquare} label="My Tasks" />
+          <NavItem href="/crm" icon={BookUser} label="CRM" />
+          <NavItem href="/messages" icon={Mail} label="Messages" />
+          <NavItem href="/reports" icon={FileText} label="Reports" />
 
-          <div className="border-t border-white/10 my-3" />
+          <div className="my-3 border-t" />
 
-          <p className="text-[10px] text-white/25 uppercase tracking-widest px-3 pb-1">Tracking</p>
-          <Link href="/attendance" onClick={() => setOpen(false)} className={linkClass}>
-            <CalendarCheck size={15} /> Attendance
-          </Link>
-          <Link href="/performance" onClick={() => setOpen(false)} className={linkClass}>
-            <BarChart2 size={15} /> Performance
-          </Link>
-          <Link href="/fines-rewards" onClick={() => setOpen(false)} className={linkClass}>
-            <Wallet size={15} /> Fine &amp; Rewards
-          </Link>
-          <Link href="/targets" onClick={() => setOpen(false)} className={linkClass}>
-            <Target size={15} /> Weekly Targets
-          </Link>
+          <p className={sectionLabel}>Tracking</p>
+          <NavItem href="/attendance" icon={CalendarCheck} label="Attendance" />
+          <NavItem href="/performance" icon={BarChart2} label="Performance" />
+          <NavItem href="/fines-rewards" icon={Wallet} label="Fine & Rewards" />
+          <NavItem href="/targets" icon={Target} label="Weekly Targets" />
 
           {isFounder && (
             <>
-              <div className="border-t border-white/10 my-3" />
-              <p className="text-[10px] text-white/25 uppercase tracking-widest px-3 pb-1">Admin</p>
-              <Link href="/admin/users" onClick={() => setOpen(false)} className={linkClass}>
-                <Users size={15} /> Users
-              </Link>
+              <div className="my-3 border-t" />
+              <p className={sectionLabel}>Admin</p>
+              <NavItem href="/admin/users" icon={Users} label="Users" />
             </>
           )}
         </nav>
 
-        <div className="px-3 py-4 border-t border-white/10">
+        <div
+          className="border-t px-3 pt-4"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+        >
           <LogoutButton />
         </div>
       </aside>
@@ -111,7 +115,7 @@ export default function SidebarClient({ profile }: {
       <button
         aria-label="Open menu"
         onClick={() => setOpen(true)}
-        className="p-2 rounded-lg hover:bg-violet-500/10 lg:hidden text-white/50 hover:text-white/80 transition-colors"
+        className="rounded-lg p-2 text-white transition-colors hover:bg-white/10 lg:hidden"
       >
         <Menu size={20} />
       </button>
