@@ -19,6 +19,15 @@ import {
   type MeetingHistoryEntry,
 } from "@/lib/types/crm";
 import {
+  CallbackDialog,
+  MeetingDialog,
+  MoveDialog,
+  SpokeDialog,
+  appendNote,
+  formatCallbackLabel,
+  formatSpokeLabel,
+} from "@/components/crm/crm-dialogs";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -330,24 +339,11 @@ function AssigneeDropdown({
   );
 }
 
-function formatShortDate(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-}
-
 function isOverdue(iso: string | null): boolean {
   if (!iso) return false;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return false;
   return d.getTime() < Date.now();
-}
-
-function addDaysIso(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString();
 }
 
 function formatMeetingDateTime(iso: string | null): string {
@@ -363,124 +359,70 @@ function formatMeetingDateTime(iso: string | null): string {
   });
 }
 
-function toDateInputValue(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function toTimeInputValue(d: Date): string {
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-function useClickOutside(open: boolean, onClose: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    }
-
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open, onClose]);
-
-  return ref;
-}
-
-function LastContactChip({
-  value,
+function SpokeChip({
+  lead,
   disabled,
-  onChange,
+  onSave,
 }: {
-  value: string | null;
+  lead: KanbanLead;
   disabled: boolean;
-  onChange: (iso: string) => void;
+  onSave: (iso: string, note: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useClickOutside(open, () => setOpen(false));
-
-  const label = value ? "Spoke " + formatShortDate(value) : "Spoke";
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
         type="button"
         disabled={disabled}
         onClick={(e) => {
           e.stopPropagation();
-          setOpen((v) => !v);
+          setOpen(true);
         }}
-        className="w-full rounded-lg bg-accent px-1 py-2 text-center text-xs font-semibold text-primary transition-colors disabled:opacity-50 whitespace-nowrap overflow-hidden text-ellipsis"
+        className="flex w-full flex-col items-center justify-center rounded-lg bg-accent px-1 py-1.5 text-center text-xs font-semibold text-primary transition-colors disabled:opacity-50"
       >
-        {label}
+        <span>Spoke</span>
+        <span className="whitespace-nowrap text-[10px] font-normal leading-tight text-primary/60">
+          {formatSpokeLabel(lead.last_contact) || "\u00A0"}
+        </span>
       </button>
 
-      {open && (
-        <div className="absolute left-0 z-20 mt-1.5 w-48 glass-card rounded-lg shadow-lg p-1.5 space-y-1">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onChange(new Date().toISOString());
-            }}
-            className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-muted transition-colors font-medium text-green-700"
-          >
-            ✓ Spoke today
-          </button>
-
-          <label className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-xs text-muted-foreground">
-            Custom date
-            <input
-              type="date"
-              defaultValue={value ? value.slice(0, 10) : ""}
-              className="text-xs bg-transparent outline-none w-[92px]"
-              onChange={(e) => {
-                if (!e.target.value) return;
-                setOpen(false);
-                onChange(e.target.value);
-              }}
-            />
-          </label>
-        </div>
-      )}
-    </div>
+      <SpokeDialog
+        open={open}
+        onOpenChange={setOpen}
+        pending={disabled}
+        onSave={(iso, note) => {
+          setOpen(false);
+          onSave(iso, note);
+        }}
+      />
+    </>
   );
 }
 
-function NextFollowupChip({
-  value,
+function CallbackChip({
+  lead,
   disabled,
-  onChange,
+  onSave,
 }: {
-  value: string | null;
+  lead: KanbanLead;
   disabled: boolean;
-  onChange: (iso: string) => void;
+  onSave: (iso: string, note: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useClickOutside(open, () => setOpen(false));
-
-  const bucket = getFollowupBucket(value);
-  const label = value ? "Callback " + formatShortDate(value) : "Callback";
+  const bucket = getFollowupBucket(lead.next_followup);
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
         type="button"
         disabled={disabled}
         onClick={(e) => {
           e.stopPropagation();
-          setOpen((v) => !v);
+          setOpen(true);
         }}
         className={
-          "w-full rounded-lg px-1 py-2 text-center text-xs font-semibold transition-colors disabled:opacity-50 whitespace-nowrap overflow-hidden text-ellipsis " +
+          "flex w-full flex-col items-center justify-center rounded-lg px-1 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 " +
           (bucket === "overdue"
             ? "bg-red-50 text-red-600"
             : bucket === "due_today"
@@ -488,47 +430,23 @@ function NextFollowupChip({
               : "bg-accent text-primary")
         }
       >
-        {label}
+        <span>Callback</span>
+        <span className="whitespace-nowrap text-[10px] font-normal leading-tight opacity-60">
+          {formatCallbackLabel(lead.next_followup) || "\u00A0"}
+        </span>
       </button>
 
-      {open && (
-        <div className="absolute right-0 z-20 mt-1.5 w-48 glass-card rounded-lg shadow-lg p-1.5 space-y-1">
-          <div className="flex gap-1">
-            {[
-              { label: "Tomorrow", days: 1 },
-              { label: "+3d", days: 3 },
-              { label: "+1w", days: 7 },
-            ].map((opt) => (
-              <button
-                key={opt.label}
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  onChange(addDaysIso(opt.days));
-                }}
-                className="flex-1 text-[11px] px-1.5 py-1 rounded-md border hover:bg-muted transition-colors"
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          <label className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-xs text-muted-foreground">
-            Custom date
-            <input
-              type="date"
-              defaultValue={value ? value.slice(0, 10) : ""}
-              className="text-xs bg-transparent outline-none w-[92px]"
-              onChange={(e) => {
-                if (!e.target.value) return;
-                setOpen(false);
-                onChange(e.target.value);
-              }}
-            />
-          </label>
-        </div>
-      )}
-    </div>
+      <CallbackDialog
+        open={open}
+        onOpenChange={setOpen}
+        initialIso={lead.next_followup}
+        pending={disabled}
+        onSave={(iso, note) => {
+          setOpen(false);
+          onSave(iso, note);
+        }}
+      />
+    </>
   );
 }
 
@@ -600,141 +518,6 @@ function DeleteConfirmModal({
             className="flex-1 text-sm px-3 py-2 rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50"
           >
             {pending ? "Deleting…" : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MeetingModal({
-  open,
-  mode,
-  initialDatetime,
-  initialNote,
-  pending,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  mode: "schedule" | "reschedule";
-  initialDatetime: string | null;
-  initialNote: string | null;
-  pending: boolean;
-  onClose: () => void;
-  onConfirm: (isoDatetime: string, note: string) => void;
-}) {
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [note, setNote] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-    const base = initialDatetime ? new Date(initialDatetime) : null;
-    setDate(base && !isNaN(base.getTime()) ? toDateInputValue(base) : "");
-    setTime(base && !isNaN(base.getTime()) ? toTimeInputValue(base) : "");
-    setNote(initialNote ?? "");
-  }, [open, initialDatetime, initialNote]);
-
-  if (!open) return null;
-
-  function pickQuickDate(days: number) {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    setDate(toDateInputValue(d));
-  }
-
-  const canConfirm = Boolean(date && time);
-
-  function handleConfirm() {
-    if (!canConfirm) return;
-    const iso = new Date(`${date}T${time}`).toISOString();
-    onConfirm(iso, note);
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full sm:max-w-sm glass-card rounded-xl p-4 space-y-4 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div>
-          <h3 className="font-semibold text-sm">
-            {mode === "schedule" ? "Schedule Meeting" : "Reschedule Meeting"}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Date and time are required — the move won&apos;t go through without them.
-          </p>
-        </div>
-
-        <div className="flex gap-1.5">
-          {[
-            ["Today", 0],
-            ["Tomorrow", 1],
-            ["Day after", 2],
-          ].map(([label, days]) => (
-            <button
-              key={label as string}
-              type="button"
-              onClick={() => pickQuickDate(days as number)}
-              className="flex-1 text-xs px-2 py-1.5 rounded-md border hover:bg-muted transition-colors"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <label className="space-y-1 block">
-            <span className="text-[11px] text-muted-foreground">Date</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="glass-card w-full rounded-md px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary"
-            />
-          </label>
-          <label className="space-y-1 block">
-            <span className="text-[11px] text-muted-foreground">Time</span>
-            <input
-              type="time"
-              value={time}
-              step={900}
-              onChange={(e) => setTime(e.target.value)}
-              className="glass-card w-full rounded-md px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary"
-            />
-          </label>
-        </div>
-
-        <label className="block space-y-1">
-          <span className="text-[11px] text-muted-foreground">Note (optional)</span>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={2}
-            placeholder="Agenda / what to discuss..."
-            className="glass-card w-full rounded-md px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary resize-none"
-          />
-        </label>
-
-        <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs px-3 py-1.5 rounded-md border hover:bg-muted transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!canConfirm || pending}
-            onClick={handleConfirm}
-            className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground disabled:opacity-50 transition-colors"
-          >
-            Confirm
           </button>
         </div>
       </div>
@@ -919,7 +702,8 @@ function LeadCard({
   onDateChange: (
     id: string,
     field: "last_contact" | "next_followup",
-    iso: string
+    iso: string,
+    note?: string
   ) => void;
   onNoteChange: (id: string, note: string) => void;
   onRequestMeetingMove: (leadId: string) => void;
@@ -936,7 +720,7 @@ function LeadCard({
   onToggleSelect: (id: string) => void;
 }) {
   const assigneeLocked = !ASSIGNEE_CHANGEABLE_STAGES.includes(lead.stage);
-  const [showMove, setShowMove] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const longPress = useLongPress(
     () => {},
@@ -1005,33 +789,40 @@ function LeadCard({
       {/* Quick actions: Call, WhatsApp, Spoke, Callback */}
       <div className="grid grid-cols-4 gap-1.5 text-center text-xs font-semibold">
         {lead.phone ? (
-          <a href={"tel:" + lead.phone} className="rounded-lg bg-accent py-2 text-primary">
+          <a
+            href={"tel:" + lead.phone}
+            className="flex items-center justify-center rounded-lg bg-accent py-2 text-primary"
+          >
             Call
           </a>
         ) : (
-          <span className="rounded-lg bg-muted py-2 text-muted-foreground/50">Call</span>
+          <span className="flex items-center justify-center rounded-lg bg-muted py-2 text-muted-foreground/50">
+            Call
+          </span>
         )}
         {lead.phone ? (
           <a
             href={"https://wa.me/" + toWhatsappNumber(lead.phone)}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg bg-green-50 py-2 text-green-700"
+            className="flex items-center justify-center rounded-lg bg-green-50 py-2 text-green-700"
           >
             WhatsApp
           </a>
         ) : (
-          <span className="rounded-lg bg-muted py-2 text-muted-foreground/50">WhatsApp</span>
+          <span className="flex items-center justify-center rounded-lg bg-muted py-2 text-muted-foreground/50">
+            WhatsApp
+          </span>
         )}
-        <LastContactChip
-          value={lead.last_contact}
+        <SpokeChip
+          lead={lead}
           disabled={pending}
-          onChange={(iso) => onDateChange(lead.id, "last_contact", iso)}
+          onSave={(iso, note) => onDateChange(lead.id, "last_contact", iso, note)}
         />
-        <NextFollowupChip
-          value={lead.next_followup}
+        <CallbackChip
+          lead={lead}
           disabled={pending}
-          onChange={(iso) => onDateChange(lead.id, "next_followup", iso)}
+          onSave={(iso, note) => onDateChange(lead.id, "next_followup", iso, note)}
         />
       </div>
 
@@ -1039,7 +830,6 @@ function LeadCard({
         type="button"
         onClick={() => {
           setExpanded((v) => !v);
-          setShowMove(false);
         }}
         aria-expanded={expanded}
         className="-mt-1 text-center text-[11px] text-muted-foreground"
@@ -1075,7 +865,7 @@ function LeadCard({
           <div className="grid grid-cols-2 gap-1.5 text-center text-xs font-semibold">
             <button
               type="button"
-              onClick={() => setShowMove((v) => !v)}
+              onClick={() => setMoveOpen(true)}
               className="rounded-lg bg-accent py-2 text-primary"
             >
               Move
@@ -1102,34 +892,20 @@ function LeadCard({
         </div>
       )}
 
-      {/* Stage move chips */}
-      {expanded && showMove && (
-        <div className="flex flex-wrap gap-1.5 border-t pt-2">
-          {stages
-            .filter((s) => s !== lead.stage)
-            .map((s) => (
-              <button
-                key={s}
-                disabled={pending}
-                onClick={() => {
-                  setShowMove(false);
-                  if (s === "meeting") {
-                    onRequestMeetingMove(lead.id);
-                  } else {
-                    onStageChange(lead.id, s);
-                  }
-                }}
-                className={
-                  "rounded-full border px-2.5 py-1 text-xs transition-opacity " +
-                  STAGE_COLORS[s].badge +
-                  " disabled:opacity-50"
-                }
-              >
-                {LEAD_STAGE_LABELS[s]}
-              </button>
-            ))}
-        </div>
-      )}
+      <MoveDialog
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        currentStage={lead.stage}
+        stages={stages}
+        pending={pending}
+        onPick={(stage) => {
+          if (stage === "meeting") {
+            onRequestMeetingMove(lead.id);
+          } else {
+            onStageChange(lead.id, stage);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -1142,6 +918,11 @@ export function KanbanBoard({
   currentUserId,
 }: KanbanBoardProps) {
   const [items, setItems] = useState(initialLeads);
+
+  // Pick up fresh server data (e.g. after a lead is created from the popup).
+  useEffect(() => {
+    setItems(initialLeads);
+  }, [initialLeads]);
   const [activeStage, setActiveStage] = useState<LeadStage>(stages[0]);
   const [pending, startTransition] = useTransition();
 
@@ -1345,16 +1126,37 @@ export function KanbanBoard({
   function handleDateChange(
     leadId: string,
     field: "last_contact" | "next_followup",
-    value: string
+    value: string,
+    note?: string
   ) {
     const previous = items;
+    const target = items.find((l) => l.id === leadId);
+    if (!target) return;
+
+    // Optional note from the Spoke / Callback popup is appended to the
+    // lead's notes with a dated label.
+    let newNotes: string | undefined;
+    if (note) {
+      const label =
+        field === "last_contact"
+          ? `Spoke ${formatSpokeLabel(value)}`
+          : `Callback ${formatCallbackLabel(value)}`;
+      newNotes = appendNote(target.notes, label, note);
+    }
 
     setItems((cur) =>
-      cur.map((l) => (l.id === leadId ? { ...l, [field]: value } : l))
+      cur.map((l) =>
+        l.id === leadId
+          ? { ...l, [field]: value, ...(newNotes !== undefined ? { notes: newNotes } : {}) }
+          : l
+      )
     );
 
     startTransition(async () => {
-      const result = await updateLeadAction(leadId, { [field]: value });
+      const result = await updateLeadAction(leadId, {
+        [field]: value,
+        ...(newNotes !== undefined ? { notes: newNotes } : {}),
+      });
 
       if (result?.error) {
         setItems(previous);
@@ -1718,7 +1520,7 @@ export function KanbanBoard({
         </div>
       )}
 
-      <MeetingModal
+      <MeetingDialog
         open={meetingModal !== null}
         mode={meetingModal?.mode ?? "schedule"}
         initialDatetime={meetingModal?.mode === "reschedule" ? meetingModalLead?.meeting_datetime ?? null : null}

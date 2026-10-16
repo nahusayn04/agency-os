@@ -85,20 +85,28 @@ export async function createLeadAction(formData: FormData) {
 
   const businessName = String(formData.get("business_name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
-  const assignedTo = String(formData.get("assigned_to") ?? "").trim();
-  const stage = String(formData.get("stage") ?? "").trim() as LeadStage;
+  const assignedTo =
+    String(formData.get("assigned_to") ?? "").trim() || profile.id;
+  const stage = (String(formData.get("stage") ?? "").trim() ||
+    "new_lead") as LeadStage;
   const nameInput = String(formData.get("name") ?? "").trim();
   const dealValueInput = String(formData.get("deal_value") ?? "").trim();
   const notesInput = String(formData.get("notes") ?? "").trim();
 
-  if (!nameInput || !businessName || !phone || !assignedTo || !stage) {
-    return {
-      error: "Name, address, phone, assignee, and stage are required.",
-    };
+  if (!nameInput || !businessName || !phone) {
+    return { error: "Name, address and phone are required." };
   }
 
-  if (!dealValueInput || !notesInput) {
-    return { error: "Deal value and notes are required." };
+  if (phone.replace(/\D/g, "").length < 10) {
+    return { error: "Enter a valid phone number." };
+  }
+
+  let dealValue: number | null = null;
+  if (dealValueInput) {
+    dealValue = Number(dealValueInput);
+    if (!Number.isFinite(dealValue) || dealValue < 0) {
+      return { error: "Deal value must be a valid number." };
+    }
   }
 
   if (!LEAD_STAGES.includes(stage)) {
@@ -120,9 +128,9 @@ export async function createLeadAction(formData: FormData) {
       phone,
       email: String(formData.get("email") ?? "").trim() || null,
       stage,
-      deal_value: Number(dealValueInput),
+      deal_value: dealValue,
       assigned_to: assignedTo,
-      notes: notesInput,
+      notes: notesInput || null,
       last_contact: formData.get("last_contact")
         ? new Date(String(formData.get("last_contact"))).toISOString()
         : null,
@@ -144,6 +152,7 @@ export async function createLeadAction(formData: FormData) {
   });
 
   revalidatePath("/crm");
+  return { success: true };
 }
 
 export async function updateLeadStageAction(
