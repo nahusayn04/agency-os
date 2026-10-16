@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CheckSquare, BookUser, Target, FileText } from "lucide-react";
 import { requireRole } from "@/lib/auth/session";
 import { getWeekStartDateString } from "@/lib/performance/week";
 import { getFounderCommitmentForWeek } from "@/lib/founder-commitment/actions";
@@ -14,6 +13,8 @@ import { FlashTaskCard } from "@/components/dashboard/flash-task-card";
 import { getTodayDateString } from "@/lib/auth/attendance";
 import { getFineAmount, closeStaleShiftSession } from "@/lib/services/strike-fine-engine";
 import { getGlobalOffDayInfo } from "@/lib/services/attendance-settings";
+import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
+import { buildKpis, getOverviewData, getLeadKpis } from "@/lib/dashboard/overview";
 
 export default async function EmployeeDashboardPage() {
   const profile = await requireRole("member");
@@ -35,6 +36,9 @@ export default async function EmployeeDashboardPage() {
   // instead of one-by-one.
   // Note: the old "unread notifications count" query was fetched but its
   // result was never used anywhere — removed, it was a wasted DB round trip.
+  const overviewPromise = getOverviewData(supabase, profile.id);
+  const leadKpisPromise = getLeadKpis(supabase);
+
   const [
     commitment,
     ownScore,
@@ -134,115 +138,62 @@ export default async function EmployeeDashboardPage() {
     ? !["pending", "in_progress", "paused", "revision_required"].includes(coldCallTask.status)
     : false;
 
-  const quickLinks = [
-    { href: "/my-tasks", label: "My Tasks", icon: CheckSquare },
-    { href: "/crm", label: "CRM", icon: BookUser },
-    { href: "/targets", label: "Targets", icon: Target },
-    { href: "/reports", label: "Reports", icon: FileText },
-  ];
+  const [overview, leadKpis] = await Promise.all([overviewPromise, leadKpisPromise]);
+  const kpis = buildKpis({
+    ...leadKpis,
+    coldCalls: coldCallTask
+      ? {
+          value: coldCallTask.mandatory_actual_count ?? 0,
+          suffix: ` / ${coldCallTask.mandatory_target_count ?? 0}`,
+          tone: coldCallSubmitted ? "green" : "red",
+          hint: coldCallSubmitted ? "Submitted" : "Submit before checkout",
+          href: "/my-tasks",
+        }
+      : { value: 0, suffix: "", hint: "No target today" },
+    pendingTasks: todaysTasks ?? 0,
+    totalFines: (myFines ?? []).length,
+    pendingFines: pendingFineCount,
+  });
 
   return (
     <div className="space-y-5">
-      {/* Hero summary card */}
-      <section className="rounded-3xl bg-primary p-5 text-primary-foreground shadow-card">
-        <p className="text-sm text-white/70">Welcome back,</p>
+      <div>
+        <p className="text-sm text-muted-foreground">Welcome back,</p>
         <h1 className="text-xl font-semibold tracking-tight">{profile.name}</h1>
+      </div>
 
-        <p className="mt-5 text-xs text-white/70">Active tasks</p>
-        <p className="text-4xl font-bold leading-tight">{todaysTasks ?? 0}</p>
-
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p className="text-lg font-bold">{weeklyTargetPercent}%</p>
-            <p className="text-[11px] text-white/70">Weekly target</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold">{ownScore?.total_score ?? "—"}</p>
-            <p className="text-[11px] text-white/70">Performance</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold">{activeStrikeCount ?? 0}</p>
-            <p className="text-[11px] text-white/70">Strikes</p>
-          </div>
-        </div>
-
-        <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/25">
-          <div
-            className="h-full rounded-full bg-white"
-            style={{ width: `${Math.min(100, Math.max(0, Number(weeklyTargetPercent) || 0))}%` }}
-          />
-        </div>
-      </section>
-
-      {/* Quick actions */}
-      <section>
-        <h2 className="mb-2 text-sm font-semibold">Quick actions</h2>
-        <div className="grid grid-cols-4 gap-2">
-          {quickLinks.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex flex-col items-center gap-1.5 rounded-2xl bg-accent px-1 py-3 text-primary transition-colors hover:bg-accent/70"
-            >
-              <Icon size={20} />
-              <span className="text-[11px] font-medium">{label}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Today */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">Today</h2>
-        <div className="grid gap-4 md:grid-cols-2">
+      <DashboardOverview
+        data={overview}
+        kpis={kpis}
+        quickActions={[
+          { href: "/my-tasks", label: "My Tasks", icon: "tasks" },
+          { href: "/crm", label: "CRM", icon: "crm" },
+          { href: "/targets", label: "Targets", icon: "targets" },
+          { href: "/reports", label: "Reports", icon: "reports" },
+        ]}
+        canImport={false}
+        canCreateTask={false}
+        chips={[
+          { label: "Weekly target", value: `${weeklyTargetPercent}%` },
+          { label: "Performance", value: String(ownScore?.total_score ?? "—") },
+          { label: "Strikes", value: String(activeStrikeCount ?? 0) },
+        ]}
+        flashTask={myFlashTask ? <FlashTaskCard task={myFlashTask} /> : undefined}
+        checkIn={
           <AttendanceCard
-            isCheckedIn={isCheckedIn}
-            offDayReason={offDayInfo.reason}
-            lastCheckinAt={lastCheckinAt}
-            shiftStart={userRow?.shift_start ?? null}
-            shiftEnd={userRow?.shift_end ?? null}
-            checkedOutToday={checkedOutToday}
-            reportPending={reportPending}
-            activeStrikeCount={activeStrikeCount ?? 0}
-            pendingFineCount={pendingFineCount}
-            fineAmount={fineAmount}
-          />
-
-          {myFlashTask && <FlashTaskCard task={myFlashTask} />}
-
-          {coldCallTask && (
-            <Link href="/my-tasks">
-              <Card
-                className={`h-full transition-colors hover:bg-muted/60 ${
-                  coldCallSubmitted
-                    ? "border-l-4 border-l-green-500"
-                    : "border-l-4 border-l-destructive"
-                }`}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="relative z-10 text-sm font-medium">
-                    Cold Calls {coldCallSubmitted ? "· Submitted" : "· Mandatory"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative z-10 text-2xl font-bold">
-                    {coldCallTask.mandatory_actual_count ?? 0}
-                    <span className="text-base font-normal text-muted-foreground">
-                      {" "}
-                      / {coldCallTask.mandatory_target_count} target
-                    </span>
-                  </div>
-                  {!coldCallSubmitted && (
-                    <p className="relative z-10 mt-1 text-xs text-muted-foreground">
-                      Submit before checkout — screenshot required.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          )}
-        </div>
-      </section>
+              isCheckedIn={isCheckedIn}
+              offDayReason={offDayInfo.reason}
+              lastCheckinAt={lastCheckinAt}
+              shiftStart={userRow?.shift_start ?? null}
+              shiftEnd={userRow?.shift_end ?? null}
+              checkedOutToday={checkedOutToday}
+              reportPending={reportPending}
+              activeStrikeCount={activeStrikeCount ?? 0}
+              pendingFineCount={pendingFineCount}
+              fineAmount={fineAmount}
+            />
+        }
+      />
 
       <FounderCommitmentReadonly
         weekStart={weekStart}

@@ -10,10 +10,11 @@ import { OverrideHistoryTable } from "@/components/dashboard/override-history-ta
 import { TeamProfilesList } from "@/components/dashboard/team-profiles-list";
 import { AttendanceCard } from "@/components/dashboard/attendance-card";
 import { FlashTaskCard } from "@/components/dashboard/flash-task-card";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { getTodayDateString } from "@/lib/auth/attendance";
 import { getFineAmount, closeStaleShiftSession } from "@/lib/services/strike-fine-engine";
 import { getGlobalOffDayInfo } from "@/lib/services/attendance-settings";
+import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
+import { buildKpis, getOverviewData } from "@/lib/dashboard/overview";
 
 export default async function FounderDashboardPage() {
   const profile = await requireRole("super_admin");
@@ -30,6 +31,8 @@ export default async function FounderDashboardPage() {
 
   // All of these are independent of each other — fetch them in parallel
   // instead of one-by-one. This is the main perf fix for this page.
+  const overviewPromise = getOverviewData(supabase, profile.id);
+
   const [
     commitment,
     overrides,
@@ -165,6 +168,25 @@ export default async function FounderDashboardPage() {
     ["pending", "in_progress", "paused", "revision_required"].includes(t.status)
   );
 
+  const overview = await overviewPromise;
+  const kpis = buildKpis({
+    totalLeads: totalLeads ?? 0,
+    activeLeads: activeLeads ?? 0,
+    dealsClosed: dealsClosed ?? 0,
+    lostDeals: lostDeals ?? 0,
+    revenue: revenueGenerated,
+    coldCalls: {
+      value: coldCallSubmittedCount,
+      suffix: ` / ${coldCallTasks.length}`,
+      hint: coldCallPending.length
+        ? `Pending: ${coldCallPending.map((t) => memberNameMap.get(t.assigned_to) ?? "?").join(", ")}`
+        : "Submitted today",
+    },
+    pendingTasks: pendingTasks ?? 0,
+    totalFines: orgFineCount,
+    pendingFines: orgPendingFineCount,
+  });
+
   return (
     <div className="space-y-8">
       <div>
@@ -174,98 +196,33 @@ export default async function FounderDashboardPage() {
         <p className="text-muted-foreground">Welcome, {profile.name}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <AttendanceCard
-          isCheckedIn={isCheckedIn}
-          offDayReason={offDayInfo.reason}
-          lastCheckinAt={lastCheckinAt}
-          shiftStart={userRow?.shift_start ?? null}
-          shiftEnd={userRow?.shift_end ?? null}
-          checkedOutToday={checkedOutToday}
-          reportPending={reportPending}
-          activeStrikeCount={activeStrikeCount ?? 0}
-         pendingFineCount={pendingFineCount}
-          fineAmount={fineAmount}
-        />
-        {myFlashTask && <FlashTaskCard task={myFlashTask} />}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="relative z-10 text-sm font-medium">Pending Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative z-10 text-2xl font-bold">{pendingTasks ?? 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="relative z-10 text-sm font-medium">Cold Calls Today</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative z-10 text-2xl font-bold">
-              {coldCallSubmittedCount}
-              <span className="text-base text-muted-foreground"> / {coldCallTasks.length} submitted</span>
-            </div>
-            {coldCallPending.length > 0 && (
-              <p className="relative z-10 mt-1 text-xs text-muted-foreground truncate">
-                Pending: {coldCallPending.map((t) => memberNameMap.get(t.assigned_to) ?? "?").join(", ")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="relative z-10 text-sm font-medium">Total Fines</CardTitle>
-              {orgPendingFineCount > 0 && (
-                <span className="relative z-10 inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-400 text-[11px] font-medium px-2.5 py-0.5">
-                  {orgPendingFineCount} pending
-                </span>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="relative z-10 text-2xl font-bold">{orgFineCount}</div>
-            </CardContent>
-          </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="relative z-10 text-sm font-medium">Total Leads</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative z-10 text-2xl font-bold">{totalLeads ?? 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="relative z-10 text-sm font-medium">Active Leads</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative z-10 text-2xl font-bold">{activeLeads ?? 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="relative z-10 text-sm font-medium">Deals Closed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative z-10 text-2xl font-bold">{dealsClosed ?? 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="relative z-10 text-sm font-medium">Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative z-10 text-2xl font-bold">${revenueGenerated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="relative z-10 text-sm font-medium">Lost Deals</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative z-10 text-2xl font-bold">{lostDeals ?? 0}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardOverview
+        data={overview}
+        kpis={kpis}
+        quickActions={[
+          { href: "/crm/new", label: "Add Lead", icon: "lead" },
+          { href: "/tasks/new", label: "New Task", icon: "task" },
+          { href: "/crm", label: "CRM", icon: "crm" },
+          { href: "/reports", label: "Reports", icon: "reports" },
+        ]}
+        canImport
+        canCreateTask
+        flashTask={myFlashTask ? <FlashTaskCard task={myFlashTask} /> : undefined}
+        checkIn={
+          <AttendanceCard
+              isCheckedIn={isCheckedIn}
+              offDayReason={offDayInfo.reason}
+              lastCheckinAt={lastCheckinAt}
+              shiftStart={userRow?.shift_start ?? null}
+              shiftEnd={userRow?.shift_end ?? null}
+              checkedOutToday={checkedOutToday}
+              reportPending={reportPending}
+              activeStrikeCount={activeStrikeCount ?? 0}
+              pendingFineCount={pendingFineCount}
+              fineAmount={fineAmount}
+            />
+        }
+      />
 
       <WeeklyCommitmentCard weekStart={weekStart} initialText={commitment?.commitment_text ?? ""} />
 
