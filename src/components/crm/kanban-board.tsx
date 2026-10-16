@@ -9,7 +9,6 @@ import {
   bulkUpdateLeadStageAction,
   bulkUpdateLeadAssigneeAction,
   rescheduleMeetingAction,
-  toggleLeadHotAction,
   deleteLeadAction,
   bulkDeleteLeadsAction,
 } from "@/lib/crm/actions";
@@ -408,7 +407,7 @@ function LastContactChip({
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(open, () => setOpen(false));
 
-  const label = value ? "Last: " + formatShortDate(value) : "Last contact";
+  const label = value ? "Spoke " + formatShortDate(value) : "Spoke";
 
   return (
     <div ref={ref} className="relative">
@@ -419,9 +418,9 @@ function LastContactChip({
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="text-[11px] px-1.5 py-0.5 rounded-md border border-transparent text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-50 whitespace-nowrap"
+        className="w-full rounded-lg bg-accent px-1 py-2 text-center text-xs font-semibold text-primary transition-colors disabled:opacity-50 whitespace-nowrap overflow-hidden text-ellipsis"
       >
-        🕓 {label}
+        {label}
       </button>
 
       {open && (
@@ -434,7 +433,7 @@ function LastContactChip({
             }}
             className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-muted transition-colors font-medium text-green-700"
           >
-            ✓ Mark contacted today
+            ✓ Spoke today
           </button>
 
           <label className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer text-xs text-muted-foreground">
@@ -468,8 +467,8 @@ function NextFollowupChip({
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(open, () => setOpen(false));
 
-  const overdue = isOverdue(value);
-  const label = value ? "Next: " + formatShortDate(value) : "Next follow-up";
+  const bucket = getFollowupBucket(value);
+  const label = value ? "Callback " + formatShortDate(value) : "Callback";
 
   return (
     <div ref={ref} className="relative">
@@ -481,17 +480,19 @@ function NextFollowupChip({
           setOpen((v) => !v);
         }}
         className={
-          "text-[11px] px-1.5 py-0.5 rounded-md border transition-colors disabled:opacity-50 whitespace-nowrap " +
-          (overdue
-            ? "border-red-200 text-red-600 bg-red-50"
-            : "border-transparent text-muted-foreground hover:text-foreground hover:border-border")
+          "w-full rounded-lg px-1 py-2 text-center text-xs font-semibold transition-colors disabled:opacity-50 whitespace-nowrap overflow-hidden text-ellipsis " +
+          (bucket === "overdue"
+            ? "bg-red-50 text-red-600"
+            : bucket === "due_today"
+              ? "bg-orange-50 text-orange-600"
+              : "bg-accent text-primary")
         }
       >
-        📅 {label}
+        {label}
       </button>
 
       {open && (
-        <div className="absolute left-0 z-20 mt-1.5 w-48 glass-card rounded-lg shadow-lg p-1.5 space-y-1">
+        <div className="absolute right-0 z-20 mt-1.5 w-48 glass-card rounded-lg shadow-lg p-1.5 space-y-1">
           <div className="flex gap-1">
             {[
               { label: "Tomorrow", days: 1 },
@@ -899,7 +900,6 @@ function LeadCard({
   onAssigneeChange,
   onDateChange,
   onNoteChange,
-  onToggleHot,
   onRequestMeetingMove,
   onRequestReschedule,
   onRequestDelete,
@@ -922,7 +922,6 @@ function LeadCard({
     iso: string
   ) => void;
   onNoteChange: (id: string, note: string) => void;
-  onToggleHot: (id: string, hot: boolean) => void;
   onRequestMeetingMove: (leadId: string) => void;
   onRequestReschedule: (leadId: string) => void;
   onRequestDelete: (leadId: string) => void;
@@ -938,6 +937,7 @@ function LeadCard({
 }) {
   const assigneeLocked = !ASSIGNEE_CHANGEABLE_STAGES.includes(lead.stage);
   const [showMove, setShowMove] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const longPress = useLongPress(
     () => {},
     5000,
@@ -984,7 +984,7 @@ function LeadCard({
         </button>
       )}
 
-      {/* Avatar + name / business / phone / value + hot star */}
+      {/* Avatar + name / business */}
       <div className="flex items-start gap-3">
         <Link
           href={detailHref}
@@ -999,34 +999,10 @@ function LeadCard({
           {lead.business_name && (
             <p className="truncate text-xs text-muted-foreground">{lead.business_name}</p>
           )}
-          {lead.phone && (
-            <p className="text-xs text-muted-foreground">{lead.phone}</p>
-          )}
-          {lead.deal_value != null && (
-            <p className="text-xs font-semibold text-primary">
-              {"$" + Number(lead.deal_value).toLocaleString()}
-            </p>
-          )}
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleHot(lead.id, !lead.is_hot_lead);
-          }}
-          disabled={pending}
-          title={lead.is_hot_lead ? "Unmark as hot lead" : "Mark as hot lead"}
-          aria-label={lead.is_hot_lead ? "Unmark as hot lead" : "Mark as hot lead"}
-          className={
-            "shrink-0 text-xl leading-none transition-colors " +
-            (lead.is_hot_lead ? "text-amber-500" : "text-muted-foreground/40 hover:text-amber-400")
-          }
-        >
-          {lead.is_hot_lead ? "★" : "☆"}
-        </button>
       </div>
 
-      {/* Quick actions */}
+      {/* Quick actions: Call, WhatsApp, Spoke, Callback */}
       <div className="grid grid-cols-4 gap-1.5 text-center text-xs font-semibold">
         {lead.phone ? (
           <a href={"tel:" + lead.phone} className="rounded-lg bg-accent py-2 text-primary">
@@ -1047,26 +1023,68 @@ function LeadCard({
         ) : (
           <span className="rounded-lg bg-muted py-2 text-muted-foreground/50">WhatsApp</span>
         )}
-        <button
-          type="button"
-          onClick={() => setShowMove((v) => !v)}
-          className="rounded-lg bg-accent py-2 text-primary"
-        >
-          Move
-        </button>
-        <Link href={detailHref} className="rounded-lg border py-2 text-muted-foreground">
-          Open
-        </Link>
+        <LastContactChip
+          value={lead.last_contact}
+          disabled={pending}
+          onChange={(iso) => onDateChange(lead.id, "last_contact", iso)}
+        />
+        <NextFollowupChip
+          value={lead.next_followup}
+          disabled={pending}
+          onChange={(iso) => onDateChange(lead.id, "next_followup", iso)}
+        />
       </div>
 
-      {/* Dates, meeting, assignee */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-col items-start gap-0.5">
-          <LastContactChip
-            value={lead.last_contact}
-            disabled={pending}
-            onChange={(iso) => onDateChange(lead.id, "last_contact", iso)}
-          />
+      <button
+        type="button"
+        onClick={() => {
+          setExpanded((v) => !v);
+          setShowMove(false);
+        }}
+        aria-expanded={expanded}
+        className="-mt-1 text-center text-[11px] text-muted-foreground"
+      >
+        {expanded ? "▴ Less" : "▾ More"}
+      </button>
+
+      {expanded && (
+        <div className="space-y-3 border-t pt-3">
+          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+            {assigneeLocked ? (
+              <span
+                title="Assignee is locked once a lead leaves Call Pending"
+                className="flex max-w-[160px] items-center gap-1"
+              >
+                <span className="truncate">🔒 {lead.assignee.name}</span>
+              </span>
+            ) : (
+              <AssigneeDropdown
+                currentAssignee={lead.assignee}
+                users={canReassign ? assignableUsers : []}
+                disabled={pending}
+                onSelect={(userId) => onAssigneeChange(lead.id, userId)}
+              />
+            )}
+            {lead.deal_value != null && (
+              <span className="font-semibold text-primary">
+                {"$" + Number(lead.deal_value).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 text-center text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setShowMove((v) => !v)}
+              className="rounded-lg bg-accent py-2 text-primary"
+            >
+              Move
+            </button>
+            <Link href={detailHref} className="rounded-lg border py-2 text-muted-foreground">
+              Open
+            </Link>
+          </div>
+
           {lead.stage === "meeting" && (
             <MeetingChip
               lead={lead}
@@ -1074,39 +1092,18 @@ function LeadCard({
               onClick={() => onRequestReschedule(lead.id)}
             />
           )}
-          <NextFollowupChip
-            value={lead.next_followup}
-            disabled={pending}
-            onChange={(iso) => onDateChange(lead.id, "next_followup", iso)}
+
+          <NotePreview
+            leadId={lead.id}
+            note={lead.notes}
+            pending={pending}
+            onSave={onNoteChange}
           />
         </div>
-
-        {assigneeLocked ? (
-          <span
-            title="Assignee is locked once a lead leaves Call Pending"
-            className="flex max-w-[140px] items-center gap-1 text-xs text-muted-foreground"
-          >
-            <span className="truncate">🔒 {lead.assignee.name}</span>
-          </span>
-        ) : (
-          <AssigneeDropdown
-            currentAssignee={lead.assignee}
-            users={canReassign ? assignableUsers : []}
-            disabled={pending}
-            onSelect={(userId) => onAssigneeChange(lead.id, userId)}
-          />
-        )}
-      </div>
-
-      <NotePreview
-        leadId={lead.id}
-        note={lead.notes}
-        pending={pending}
-        onSave={onNoteChange}
-      />
+      )}
 
       {/* Stage move chips */}
-      {showMove && (
+      {expanded && showMove && (
         <div className="flex flex-wrap gap-1.5 border-t pt-2">
           {stages
             .filter((s) => s !== lead.stage)
@@ -1295,21 +1292,6 @@ export function KanbanBoard({
 
     startTransition(async () => {
       const result = await rescheduleMeetingAction(leadId, isoDatetime, note);
-      if (result?.error) {
-        setItems(previous);
-      }
-    });
-  }
-
-  function handleToggleHot(leadId: string, hot: boolean) {
-    const previous = items;
-
-    setItems((cur) =>
-      cur.map((l) => (l.id === leadId ? { ...l, is_hot_lead: hot } : l))
-    );
-
-    startTransition(async () => {
-      const result = await toggleLeadHotAction(leadId, hot);
       if (result?.error) {
         setItems(previous);
       }
@@ -1715,7 +1697,6 @@ export function KanbanBoard({
               onAssigneeChange={handleAssigneeChange}
               onDateChange={handleDateChange}
               onNoteChange={handleNoteChange}
-              onToggleHot={handleToggleHot}
               onRequestMeetingMove={(leadId) =>
                 setMeetingModal({ leadId, mode: "schedule" })
               }

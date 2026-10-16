@@ -113,7 +113,7 @@ export interface ColdCallTargetRow {
   exempt: boolean;
 }
 
-/** For the settings UI: every active member with their resolved target. */
+/** For the settings UI: every active member, admin and founder with their resolved target. */
 export async function listColdCallTargets(): Promise<ColdCallTargetRow[]> {
   const admin = createAdminClient();
   const [{ data: users }, defaultTarget] = await Promise.all([
