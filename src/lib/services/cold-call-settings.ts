@@ -120,7 +120,7 @@ export async function listColdCallTargets(): Promise<ColdCallTargetRow[]> {
     admin
       .from("users")
       .select("id, name, cold_call_target_override, cold_call_exempt")
-      .eq("role", "member")
+      .in("role", ["member", "admin", "super_admin"])
       .eq("is_active", true)
       .order("name"),
     getDefaultColdCallTarget(),
