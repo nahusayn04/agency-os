@@ -88,6 +88,19 @@ export function formatCallbackLabel(iso: string | null): string {
   return isNaN(d.getTime()) ? "" : `${shortDate(d)}, ${timeLabel(d)}`;
 }
 
+/** "18 Oct, 16:00" — 24-hour, only for the CRM card's Callback button. */
+export function formatCallbackButtonLabel(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const time = d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  return `${shortDate(d)}, ${time}`;
+}
+
 /** Appends a dated line to the lead's existing notes. */
 export function appendNote(
   existing: string | null,
@@ -132,34 +145,57 @@ export function SpokeDialog({
   open,
   onOpenChange,
   pending,
+  initialCallbackIso,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pending: boolean;
-  onSave: (iso: string, note: string) => void;
+  /** Existing future callback, if any — preselected in the callback picker. */
+  initialCallbackIso?: string | null;
+  onSave: (iso: string, note: string, callbackIso: string) => void;
 }) {
   const today = toDateInputValue(new Date());
   const yesterday = toDateInputValue(addDays(-1));
 
   const [date, setDate] = useState(today);
   const [note, setNote] = useState("");
+  const [cbDate, setCbDate] = useState("");
+  const [cbTime, setCbTime] = useState<TimeState>({ h: 10, m: 0, pm: false });
 
   useEffect(() => {
     if (!open) return;
     setDate(toDateInputValue(new Date()));
     setNote("");
-  }, [open]);
+    const base = initialCallbackIso ? new Date(initialCallbackIso) : null;
+    const usable = base && !isNaN(base.getTime()) && base.getTime() > Date.now();
+    if (usable) {
+      setCbDate(dateToStr(base));
+      setCbTime(dateToTimeState(base));
+    } else {
+      setCbDate(dateToStr(addDays(1)));
+      setCbTime({ h: 10, m: 0, pm: false });
+    }
+  }, [open, initialCallbackIso]);
 
   const valid = Boolean(date) && date <= today;
+  const cbPicked = cbDate ? buildDate(cbDate, cbTime) : null;
+  const cbOk = cbPicked !== null && cbPicked.getTime() > Date.now();
+
+  function onPickCbDate(ds: string) {
+    const todayStr = dateToStr(new Date());
+    if (ds === todayStr) setCbTime(defaultTimeFor(ds));
+    else if (cbDate === todayStr) setCbTime({ h: 10, m: 0, pm: false });
+    setCbDate(ds);
+  }
 
   function handleSave() {
-    if (!valid) return;
+    if (!valid || !cbPicked || !cbOk) return;
     const iso =
       date === today
         ? new Date().toISOString()
         : new Date(`${date}T12:00:00`).toISOString();
-    onSave(iso, note.trim());
+    onSave(iso, note.trim(), cbPicked.toISOString());
   }
 
   return (
@@ -194,6 +230,21 @@ export function SpokeDialog({
         </div>
 
         <div className="space-y-1.5">
+          <Label>Callback (required)</Label>
+          <DateStrip value={cbDate} onPick={onPickCbDate} />
+          <p
+            className={
+              "text-center text-sm font-semibold " +
+              (cbOk ? "text-primary" : "text-destructive")
+            }
+          >
+            {cbPicked ? describeWhen(cbPicked) : ""}
+            {cbPicked && !cbOk ? " — pick a future time" : ""}
+          </p>
+          <TimeWheel value={cbTime} onChange={setCbTime} />
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="spoke-note">Note (optional)</Label>
           <Textarea
             id="spoke-note"
@@ -209,7 +260,7 @@ export function SpokeDialog({
             type="button"
             size="xl"
             className="w-full"
-            disabled={!valid || pending}
+            disabled={!valid || !cbOk || pending}
             onClick={handleSave}
           >
             Save

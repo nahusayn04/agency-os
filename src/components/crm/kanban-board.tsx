@@ -25,6 +25,7 @@ import {
   SpokeDialog,
   appendNote,
   formatCallbackLabel,
+  formatCallbackButtonLabel,
   formatSpokeLabel,
 } from "@/components/crm/crm-dialogs";
 import { CallLink } from "@/components/crm/call-link";
@@ -367,7 +368,7 @@ function SpokeChip({
 }: {
   lead: KanbanLead;
   disabled: boolean;
-  onSave: (iso: string, note: string) => void;
+  onSave: (iso: string, note: string, callbackIso: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -392,9 +393,10 @@ function SpokeChip({
         open={open}
         onOpenChange={setOpen}
         pending={disabled}
-        onSave={(iso, note) => {
+        initialCallbackIso={lead.next_followup}
+        onSave={(iso, note, callbackIso) => {
           setOpen(false);
-          onSave(iso, note);
+          onSave(iso, note, callbackIso);
         }}
       />
     </>
@@ -432,8 +434,8 @@ function CallbackChip({
         }
       >
         <span>Callback</span>
-        <span className="text-[10px] font-normal leading-tight opacity-60">
-          {formatCallbackLabel(lead.next_followup) || "\u00A0"}
+        <span className="whitespace-nowrap text-[10px] font-normal leading-tight opacity-60">
+          {formatCallbackButtonLabel(lead.next_followup) || "\u00A0"}
         </span>
       </button>
 
@@ -704,7 +706,8 @@ function LeadCard({
     id: string,
     field: "last_contact" | "next_followup",
     iso: string,
-    note?: string
+    note?: string,
+    callbackIso?: string
   ) => void;
   onNoteChange: (id: string, note: string) => void;
   onRequestMeetingMove: (leadId: string) => void;
@@ -820,7 +823,9 @@ function LeadCard({
         <SpokeChip
           lead={lead}
           disabled={pending}
-          onSave={(iso, note) => onDateChange(lead.id, "last_contact", iso, note)}
+          onSave={(iso, note, callbackIso) =>
+            onDateChange(lead.id, "last_contact", iso, note, callbackIso)
+          }
         />
         <CallbackChip
           lead={lead}
@@ -1130,7 +1135,8 @@ export function KanbanBoard({
     leadId: string,
     field: "last_contact" | "next_followup",
     value: string,
-    note?: string
+    note?: string,
+    callbackIso?: string
   ) {
     const previous = items;
     const target = items.find((l) => l.id === leadId);
@@ -1142,15 +1148,24 @@ export function KanbanBoard({
     if (note) {
       const label =
         field === "last_contact"
-          ? `Spoke ${formatSpokeLabel(value)}`
+          ? `Spoke ${formatSpokeLabel(value)}` +
+            (callbackIso ? ` (callback ${formatCallbackLabel(callbackIso)})` : "")
           : `Callback ${formatCallbackLabel(value)}`;
       newNotes = appendNote(target.notes, label, note);
     }
 
+    // Spoke popup also sets the next callback in the same save.
+    const extra = callbackIso ? { next_followup: callbackIso } : {};
+
     setItems((cur) =>
       cur.map((l) =>
         l.id === leadId
-          ? { ...l, [field]: value, ...(newNotes !== undefined ? { notes: newNotes } : {}) }
+          ? {
+              ...l,
+              [field]: value,
+              ...extra,
+              ...(newNotes !== undefined ? { notes: newNotes } : {}),
+            }
           : l
       )
     );
@@ -1158,6 +1173,7 @@ export function KanbanBoard({
     startTransition(async () => {
       const result = await updateLeadAction(leadId, {
         [field]: value,
+        ...extra,
         ...(newNotes !== undefined ? { notes: newNotes } : {}),
       });
 
