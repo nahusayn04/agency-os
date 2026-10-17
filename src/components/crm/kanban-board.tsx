@@ -27,6 +27,7 @@ import {
   formatCallbackLabel,
   formatSpokeLabel,
 } from "@/components/crm/crm-dialogs";
+import { CallLink } from "@/components/crm/call-link";
 import {
   Select,
   SelectContent,
@@ -789,12 +790,14 @@ function LeadCard({
       {/* Quick actions: Call, WhatsApp, Spoke, Callback */}
       <div className="grid grid-cols-4 gap-1.5 text-center text-xs font-semibold">
         {lead.phone ? (
-          <a
-            href={"tel:" + lead.phone}
+          <CallLink
+            leadId={lead.id}
+            name={lead.name}
+            phone={lead.phone}
             className="flex items-center justify-center rounded-lg bg-accent py-2 text-primary"
           >
             Call
-          </a>
+          </CallLink>
         ) : (
           <span className="flex items-center justify-center rounded-lg bg-muted py-2 text-muted-foreground/50">
             Call

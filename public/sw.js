@@ -13,5 +13,18 @@ self.addEventListener("push", function (event) {
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
   const link = event.notification.data?.link || "/";
-  event.waitUntil(clients.openWindow(link));
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then(function (list) {
+        for (const client of list) {
+          if ("focus" in client && "navigate" in client) {
+            return client.focus().then(function () {
+              return client.navigate(link);
+            });
+          }
+        }
+        return clients.openWindow(link);
+      })
+  );
 });

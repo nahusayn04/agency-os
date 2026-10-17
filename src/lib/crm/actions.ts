@@ -1046,3 +1046,47 @@ export async function getAssignableUsers() {
 
   return users;
 }
+
+export interface LeadSnapshot {
+  id: string;
+  name: string;
+  business_name: string | null;
+  phone: string | null;
+  stage: LeadStage;
+  notes: string | null;
+}
+
+/**
+ * Light read used by the post-call popup. RLS + the explicit member check
+ * mean a member can only open popups for their own leads.
+ */
+export async function getLeadSnapshotAction(
+  leadId: string
+): Promise<{ lead: LeadSnapshot } | { error: string }> {
+  const profile = await requireUserProfile();
+  const supabase = createClient();
+
+  const { data: lead, error } = await supabase
+    .from("leads")
+    .select("id, name, business_name, phone, stage, notes, assigned_to, deleted_at")
+    .eq("id", leadId)
+    .single();
+
+  if (error || !lead || lead.deleted_at) {
+    return { error: "Lead nahi mili (shayad delete ho gayi)." };
+  }
+  if (profile.role === "member" && lead.assigned_to !== profile.id) {
+    return { error: "Ye lead tumhari nahi hai." };
+  }
+
+  return {
+    lead: {
+      id: lead.id,
+      name: lead.name,
+      business_name: lead.business_name,
+      phone: lead.phone,
+      stage: lead.stage as LeadStage,
+      notes: lead.notes,
+    },
+  };
+}

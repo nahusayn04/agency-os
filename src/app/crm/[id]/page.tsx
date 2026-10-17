@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CallLink } from "@/components/crm/call-link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireUserProfile } from "@/lib/auth/session";
@@ -73,12 +74,14 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
         </span>
         {lead.phone && (
           <div className="mt-3 grid grid-cols-2 gap-2 text-sm font-semibold">
-            <a
-              href={"tel:" + lead.phone}
+            <CallLink
+              leadId={lead.id}
+              name={lead.name}
+              phone={lead.phone}
               className="rounded-xl bg-accent py-2 text-primary"
             >
               Call
-            </a>
+            </CallLink>
             <a
               href={"https://wa.me/" + (lead.phone.replace(/\D/g, "").length === 10 ? "91" : "") + lead.phone.replace(/\D/g, "")}
               target="_blank"
