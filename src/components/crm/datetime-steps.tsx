@@ -44,7 +44,7 @@ export function defaultTimeFor(dateStr: string): TimeState {
   return { h: 10, m: 0, pm: false };
 }
 
-/** "Kal, 18 Oct · 4:30 PM" */
+/** "Tomorrow, 18 Oct · 4:30 PM" */
 export function describeWhen(d: Date): string {
   const today = new Date();
   const tomorrow = new Date();
@@ -52,9 +52,9 @@ export function describeWhen(d: Date): string {
   const ds = dateToStr(d);
   const day =
     ds === dateToStr(today)
-      ? "Aaj"
+      ? "Today"
       : ds === dateToStr(tomorrow)
-        ? "Kal"
+        ? "Tomorrow"
         : d.toLocaleDateString("en-IN", { weekday: "short" });
   const date = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
   const time = d.toLocaleTimeString("en-US", {
@@ -138,9 +138,9 @@ export function DateStrip({
           const selected = ds === value;
           const top =
             ds === todayStr
-              ? "Aaj"
+              ? "Today"
               : ds === tomorrowStr
-                ? "Kal"
+                ? "Tomorrow"
                 : d.toLocaleDateString("en-IN", { weekday: "short" });
           return (
             <button

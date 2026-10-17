@@ -1074,10 +1074,10 @@ export async function getLeadSnapshotAction(
     .single();
 
   if (error || !lead || lead.deleted_at) {
-    return { error: "Lead nahi mili (shayad delete ho gayi)." };
+    return { error: "Lead not found (it may have been deleted)." };
   }
   if (profile.role === "member" && lead.assigned_to !== profile.id) {
-    return { error: "Ye lead tumhari nahi hai." };
+    return { error: "This lead is not assigned to you." };
   }
 
   return {
