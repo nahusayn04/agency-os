@@ -9,6 +9,7 @@ import SidebarClient from "@/components/sidebar-client";
 import BottomNav from "@/components/bottom-nav";
 import { createClient } from "@/lib/supabase/server";
 import { getTodayDateString } from "@/lib/auth/attendance";
+import { getTodayCallsCount } from "@/lib/crm/today-calls";
 
 function formatDisplayName(name?: string | null, email?: string | null) {
   if (name && name.trim() !== "") return name;
@@ -31,6 +32,7 @@ export default async function Header() {
 
   const supabase = createClient();
   const today = getTodayDateString();
+  const todayCalls = await getTodayCallsCount(profile.id);
   const { data: coldCallTask, error: coldCallError } = await supabase
     .from("tasks")
     .select("status, mandatory_target_count")
@@ -50,14 +52,14 @@ export default async function Header() {
 
   return (
     <>
-      <Sidebar />
+      <Sidebar todayCalls={todayCalls} />
       <header
         className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-card lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <SidebarClient profile={{ id: profile.id, name: displayName, role: profile.role, email: profile.email, dashboardPath }} />
+            <SidebarClient profile={{ id: profile.id, name: displayName, role: profile.role, email: profile.email, dashboardPath, todayCalls }} />
             <Link href={dashboardPath} className="text-base font-semibold lg:hidden">
               Agency OS
             </Link>

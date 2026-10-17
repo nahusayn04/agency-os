@@ -17,6 +17,7 @@ import {
   Target,
   Users,
   Wallet,
+  PhoneCall,
   ChevronsRight,
   LogOut,
   type LucideIcon,
@@ -29,11 +30,13 @@ function NavLink({
   icon: Icon,
   label,
   collapsed,
+  badge,
 }: {
   href: string;
   icon: LucideIcon;
   label: string;
   collapsed: boolean;
+  badge?: number;
 }) {
   const pathname = usePathname();
   const active = pathname === href || pathname?.startsWith(href + "/");
@@ -49,8 +52,20 @@ function NavLink({
           : "text-muted-foreground hover:bg-accent hover:text-primary"
       }`}
     >
-      <Icon size={18} className="shrink-0" />
+      <span className="relative shrink-0">
+        <Icon size={18} />
+        {collapsed && badge ? (
+          <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        ) : null}
+      </span>
       {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && badge ? (
+        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -59,9 +74,10 @@ interface SidebarDesktopProps {
   dashboardPath: string;
   isFounder: boolean;
   showTasksLink: boolean;
+  todayCalls?: number;
 }
 
-export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink }: SidebarDesktopProps) {
+export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink, todayCalls = 0 }: SidebarDesktopProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -110,6 +126,7 @@ export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink
             <NavLink href="/tasks" icon={ClipboardList} label="Tasks" collapsed={collapsed} />
           )}
           <NavLink href="/my-tasks" icon={CheckSquare} label="My Tasks" collapsed={collapsed} />
+          <NavLink href="/crm/today" icon={PhoneCall} label="Today's Calls" collapsed={collapsed} badge={todayCalls} />
           <NavLink href="/crm" icon={BookUser} label="CRM" collapsed={collapsed} />
           <NavLink href="/messages" icon={Mail} label="Messages" collapsed={collapsed} />
           <NavLink href="/reports" icon={FileText} label="Reports" collapsed={collapsed} />

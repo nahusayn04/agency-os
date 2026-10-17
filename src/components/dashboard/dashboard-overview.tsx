@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { animate, motion, useReducedMotion, type Variants } from "framer-motion";
-import { BookUser, CheckSquare, FileText, Plus, Target, Upload, UserPlus } from "lucide-react";
+import { BookUser, CheckSquare, FileText, PhoneCall, Plus, Target, Upload, UserPlus } from "lucide-react";
 import { ImportLeadsDialog } from "@/components/crm/import-leads-dialog";
 import type { Kpi, OverviewData, OverviewLead } from "@/lib/dashboard/overview";
 
@@ -168,6 +168,7 @@ export function DashboardOverview({
   quickActions,
   canImport,
   canCreateTask,
+  todayCalls,
 }: {
   data: OverviewData;
   kpis: Kpi[];
@@ -177,6 +178,7 @@ export function DashboardOverview({
   quickActions: QuickAction[];
   canImport: boolean;
   canCreateTask: boolean;
+  todayCalls?: number;
 }) {
   const [importOpen, setImportOpen] = useState(false);
 
@@ -185,6 +187,19 @@ export function DashboardOverview({
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
         <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
+            {todayCalls !== undefined && (
+              <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
+                <Link
+                  href="/crm/today"
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card"
+                >
+                  <PhoneCall size={15} /> Today&apos;s Calls
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-xs font-bold">
+                    {todayCalls}
+                  </span>
+                </Link>
+              </motion.div>
+            )}
             {quickActions.map((q) => {
               const Icon = ICONS[q.icon];
               return (

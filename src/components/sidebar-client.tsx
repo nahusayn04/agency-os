@@ -4,10 +4,10 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
-import { LayoutDashboard, ClipboardList, CheckSquare, BookUser, Mail, FileText, CalendarCheck, BarChart2, Target, Users, Wallet, X, Menu } from "lucide-react";
+import { LayoutDashboard, ClipboardList, CheckSquare, BookUser, Mail, FileText, CalendarCheck, BarChart2, Target, Users, Wallet, PhoneCall, X, Menu } from "lucide-react";
 
 export default function SidebarClient({ profile }: {
-  profile: { id: string; name: string; role: string; email?: string; dashboardPath: string }
+  profile: { id: string; name: string; role: string; email?: string; dashboardPath: string; todayCalls?: number }
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -33,7 +33,7 @@ export default function SidebarClient({ profile }: {
   const isFounder = profile.role === "super_admin";
   const showTasksLink = ["admin", "super_admin"].includes(profile.role || "");
 
-  const NavItem = ({ href, icon: Icon, label }: { href: string; icon: typeof Menu; label: string }) => {
+  const NavItem = ({ href, icon: Icon, label, badge }: { href: string; icon: typeof Menu; label: string; badge?: number }) => {
     const active = pathname === href || pathname?.startsWith(href + "/");
     return (
       <Link
@@ -46,6 +46,11 @@ export default function SidebarClient({ profile }: {
         }`}
       >
         <Icon size={18} /> {label}
+        {badge ? (
+          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        ) : null}
       </Link>
     );
   };
@@ -79,6 +84,7 @@ export default function SidebarClient({ profile }: {
           <NavItem href={profile.dashboardPath} icon={LayoutDashboard} label="Dashboard" />
           {showTasksLink && <NavItem href="/tasks" icon={ClipboardList} label="Tasks" />}
           <NavItem href="/my-tasks" icon={CheckSquare} label="My Tasks" />
+          <NavItem href="/crm/today" icon={PhoneCall} label="Today's Calls" badge={profile.todayCalls} />
           <NavItem href="/crm" icon={BookUser} label="CRM" />
           <NavItem href="/messages" icon={Mail} label="Messages" />
           <NavItem href="/reports" icon={FileText} label="Reports" />

@@ -2,7 +2,7 @@ import { requireUserProfile } from "@/lib/auth/session";
 import { getDashboardPathForRole } from "@/lib/auth/roles";
 import SidebarDesktop from "@/components/sidebar-desktop";
 
-export default async function Sidebar() {
+export default async function Sidebar({ todayCalls = 0 }: { todayCalls?: number }) {
   const profile = await requireUserProfile();
   const dashboardPath = getDashboardPathForRole(profile.role);
 
@@ -14,6 +14,7 @@ export default async function Sidebar() {
       dashboardPath={dashboardPath}
       isFounder={isFounder}
       showTasksLink={showTasksLink}
+      todayCalls={todayCalls}
     />
   );
 }

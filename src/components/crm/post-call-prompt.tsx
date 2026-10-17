@@ -193,7 +193,17 @@ export function PostCallPrompt() {
       const updates: Record<string, string> = {};
       const nowIso = new Date().toISOString();
       if (spoke) updates.last_contact = nowIso;
-      if (cbValid && cbPicked) updates.next_followup = cbPicked.toISOString();
+      if (cbValid && cbPicked) {
+        updates.next_followup = cbPicked.toISOString();
+      } else if ((spoke || (stage && stage !== lead.stage)) && lead.next_followup) {
+        // Call handled and no new callback chosen: clear an old/today
+        // callback so the lead leaves "Today's Calls" (count goes down).
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
+        if (new Date(lead.next_followup).getTime() <= endOfToday.getTime()) {
+          updates.next_followup = "";
+        }
+      }
 
       const trimmed = note.trim();
       if (trimmed) {

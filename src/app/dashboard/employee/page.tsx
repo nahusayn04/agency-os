@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTodayCallsCount } from "@/lib/crm/today-calls";
 import { requireRole } from "@/lib/auth/session";
 import { getWeekStartDateString } from "@/lib/performance/week";
 import { getFounderCommitmentForWeek } from "@/lib/founder-commitment/actions";
@@ -18,6 +19,7 @@ import { buildKpis, getOverviewData, getLeadKpis } from "@/lib/dashboard/overvie
 
 export default async function EmployeeDashboardPage() {
   const profile = await requireRole("member");
+  const todayCalls = await getTodayCallsCount(profile.id);
 
   // Writes to the DB (auto-checkout for stale sessions) — must finish
   // before we read is_checked_in below, so this stays sequential.
@@ -165,12 +167,8 @@ export default async function EmployeeDashboardPage() {
       <DashboardOverview
         data={overview}
         kpis={kpis}
-        quickActions={[
-          { href: "/my-tasks", label: "My Tasks", icon: "tasks" },
-          { href: "/crm", label: "CRM", icon: "crm" },
-          { href: "/targets", label: "Targets", icon: "targets" },
-          { href: "/reports", label: "Reports", icon: "reports" },
-        ]}
+        quickActions={[]}
+        todayCalls={todayCalls}
         canImport={false}
         canCreateTask={false}
         chips={[

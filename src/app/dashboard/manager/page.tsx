@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth/session";
+import { getTodayCallsCount } from "@/lib/crm/today-calls";
 import { getRoleDisplayName } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -16,6 +17,7 @@ import { buildKpis, getOverviewData, getOrgColdCalls } from "@/lib/dashboard/ove
 
 export default async function ManagerDashboardPage() {
   const profile = await requireRole("admin");
+  const todayCalls = await getTodayCallsCount(profile.id);
 
   // Writes to the DB (auto-checkout for stale sessions) — must finish
   // before we read is_checked_in below, so this stays sequential.
@@ -167,12 +169,8 @@ export default async function ManagerDashboardPage() {
       <DashboardOverview
         data={overview}
         kpis={kpis}
-        quickActions={[
-          { href: "/crm/new", label: "Add Lead", icon: "lead" },
-          { href: "/tasks/new", label: "New Task", icon: "task" },
-          { href: "/crm", label: "CRM", icon: "crm" },
-          { href: "/reports", label: "Reports", icon: "reports" },
-        ]}
+        quickActions={[]}
+        todayCalls={todayCalls}
         canImport
         canCreateTask
         flashTask={myFlashTask ? <FlashTaskCard task={myFlashTask} /> : undefined}

@@ -1054,6 +1054,7 @@ export interface LeadSnapshot {
   phone: string | null;
   stage: LeadStage;
   notes: string | null;
+  next_followup: string | null;
 }
 
 /**
@@ -1068,7 +1069,7 @@ export async function getLeadSnapshotAction(
 
   const { data: lead, error } = await supabase
     .from("leads")
-    .select("id, name, business_name, phone, stage, notes, assigned_to, deleted_at")
+    .select("id, name, business_name, phone, stage, notes, next_followup, assigned_to, deleted_at")
     .eq("id", leadId)
     .single();
 
@@ -1087,6 +1088,7 @@ export async function getLeadSnapshotAction(
       phone: lead.phone,
       stage: lead.stage as LeadStage,
       notes: lead.notes,
+      next_followup: lead.next_followup,
     },
   };
 }
