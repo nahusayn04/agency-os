@@ -16,6 +16,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DateStrip,
+  StepHeader,
+  TimeWheel,
+  buildDate,
+  dateToStr,
+  dateToTimeState,
+  defaultTimeFor,
+  describeWhen,
+  type TimeState,
+} from "@/components/crm/datetime-steps";
 
 /* -------------------------------------------------------------------------- */
 /* Shared helpers                                                             */
@@ -226,29 +237,33 @@ export function CallbackDialog({
   pending: boolean;
   onSave: (iso: string, note: string) => void;
 }) {
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [step, setStep] = useState<"date" | "time">("date");
+  const [dateStr, setDateStr] = useState("");
+  const [time, setTime] = useState<TimeState>({ h: 10, m: 0, pm: false });
   const [note, setNote] = useState("");
+  const [showNote, setShowNote] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     const base = initialIso ? new Date(initialIso) : null;
     const usable = base && !isNaN(base.getTime()) && base.getTime() > Date.now();
-    setDate(usable ? toDateInputValue(base) : "");
-    setTime(usable ? toTimeInputValue(base) : "");
+    setStep("date");
+    setDateStr(usable ? dateToStr(base) : "");
+    setTime(usable ? dateToTimeState(base) : { h: 10, m: 0, pm: false });
     setNote("");
+    setShowNote(false);
   }, [open, initialIso]);
 
-  const today = toDateInputValue(new Date());
-  const tomorrow = toDateInputValue(addDays(1));
-
-  const picked = date && time ? new Date(`${date}T${time}`) : null;
+  const picked = dateStr ? buildDate(dateStr, time) : null;
   const inFuture = picked !== null && picked.getTime() > Date.now();
-  const preview = picked && !isNaN(picked.getTime()) ? formatCallbackLabel(picked.toISOString()) : "";
 
-  function pickTomorrow() {
-    setDate(tomorrow);
-    if (!time) setTime("10:00");
+  function goTime() {
+    if (!dateStr) return;
+    // First time here for this date: start from a sensible time.
+    const existing = initialIso ? new Date(initialIso) : null;
+    const sameDay = existing && dateToStr(existing) === dateStr;
+    if (!sameDay) setTime(defaultTimeFor(dateStr));
+    setStep("time");
   }
 
   function handleSave() {
@@ -259,72 +274,68 @@ export function CallbackDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => onOpenChange(o)}>
       <DialogContent className={SHEET}>
-        <DialogHeader>
-          <DialogTitle>Schedule callback</DialogTitle>
-        </DialogHeader>
-
-        <BigChoice selected={date === tomorrow} onClick={pickTomorrow}>
-          Tomorrow
-        </BigChoice>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="cb-date">Date</Label>
-            <input
-              id="cb-date"
-              type="date"
-              value={date}
-              min={today}
-              onChange={(e) => setDate(e.target.value)}
-              className={NATIVE_FIELD}
+        {step === "date" ? (
+          <>
+            <StepHeader title="Callback kab?" sub="Step 1/2 · Date" />
+            <DateStrip value={dateStr} onPick={setDateStr} />
+            <DialogFooter className={FOOTER}>
+              <Button
+                type="button"
+                size="xl"
+                className="w-full"
+                disabled={!dateStr}
+                onClick={goTime}
+              >
+                Next
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <StepHeader
+              title="Time chuno"
+              sub="Step 2/2 · Time"
+              onBack={() => setStep("date")}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cb-time">Time</Label>
-            <input
-              id="cb-time"
-              type="time"
-              value={time}
-              step={900}
-              onChange={(e) => setTime(e.target.value)}
-              className={NATIVE_FIELD}
-            />
-          </div>
-        </div>
-
-        {preview && (
-          <p
-            className={
-              "text-center text-sm " +
-              (inFuture ? "text-muted-foreground" : "text-destructive")
-            }
-          >
-            {inFuture ? preview : "Pick a time in the future"}
-          </p>
+            <p
+              className={
+                "text-center text-sm font-semibold " +
+                (inFuture ? "text-primary" : "text-destructive")
+              }
+            >
+              {picked ? describeWhen(picked) : ""}
+              {picked && !inFuture ? " — future ka time chuno" : ""}
+            </p>
+            <TimeWheel value={time} onChange={setTime} />
+            {showNote ? (
+              <Textarea
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Note (optional)"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNote(true)}
+                className="mx-auto text-xs font-medium text-primary"
+              >
+                + Note
+              </button>
+            )}
+            <DialogFooter className={FOOTER}>
+              <Button
+                type="button"
+                size="xl"
+                className="w-full"
+                disabled={!inFuture || pending}
+                onClick={handleSave}
+              >
+                Save
+              </Button>
+            </DialogFooter>
+          </>
         )}
-
-        <div className="space-y-1.5">
-          <Label htmlFor="cb-note">Note (optional)</Label>
-          <Textarea
-            id="cb-note"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="What to talk about?"
-          />
-        </div>
-
-        <DialogFooter className={FOOTER}>
-          <Button
-            type="button"
-            size="xl"
-            className="w-full"
-            disabled={!inFuture || pending}
-            onClick={handleSave}
-          >
-            Save
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -397,99 +408,96 @@ export function MeetingDialog({
   onClose: () => void;
   onConfirm: (isoDatetime: string, note: string) => void;
 }) {
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [step, setStep] = useState<"date" | "time">("date");
+  const [dateStr, setDateStr] = useState("");
+  const [time, setTime] = useState<TimeState>({ h: 10, m: 0, pm: false });
   const [note, setNote] = useState("");
+  const [showNote, setShowNote] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     const base = initialDatetime ? new Date(initialDatetime) : null;
     const ok = base && !isNaN(base.getTime());
-    setDate(ok ? toDateInputValue(base) : "");
-    setTime(ok ? toTimeInputValue(base) : "");
+    setStep("date");
+    setDateStr(ok ? dateToStr(base) : "");
+    setTime(ok ? dateToTimeState(base) : { h: 10, m: 0, pm: false });
     setNote(initialNote ?? "");
+    setShowNote(Boolean(initialNote));
   }, [open, initialDatetime, initialNote]);
 
-  const quick: [string, number][] = [
-    ["Today", 0],
-    ["Tomorrow", 1],
-    ["Day after", 2],
-  ];
+  const picked = dateStr ? buildDate(dateStr, time) : null;
+  const canConfirm = picked !== null && !isNaN(picked.getTime());
 
-  const canConfirm = Boolean(date && time);
+  function goTime() {
+    if (!dateStr) return;
+    const existing = initialDatetime ? new Date(initialDatetime) : null;
+    const sameDay = existing && !isNaN(existing.getTime()) && dateToStr(existing) === dateStr;
+    if (!sameDay) setTime(defaultTimeFor(dateStr));
+    setStep("time");
+  }
 
   function handleConfirm() {
-    if (!canConfirm) return;
-    onConfirm(new Date(`${date}T${time}`).toISOString(), note);
+    if (!picked || !canConfirm) return;
+    onConfirm(picked.toISOString(), note.trim());
   }
+
+  const title = mode === "schedule" ? "Meeting kab?" : "Meeting reschedule";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className={SHEET}>
-        <DialogHeader>
-          <DialogTitle>
-            {mode === "schedule" ? "Schedule meeting" : "Reschedule meeting"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="grid grid-cols-3 gap-2">
-          {quick.map(([label, days]) => (
-            <BigChoice
-              key={label}
-              selected={date === toDateInputValue(addDays(days))}
-              onClick={() => setDate(toDateInputValue(addDays(days)))}
-            >
-              {label}
-            </BigChoice>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="mt-date">Date</Label>
-            <input
-              id="mt-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={NATIVE_FIELD}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="mt-time">Time</Label>
-            <input
-              id="mt-time"
-              type="time"
-              value={time}
-              step={900}
-              onChange={(e) => setTime(e.target.value)}
-              className={NATIVE_FIELD}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="mt-note">Note (optional)</Label>
-          <Textarea
-            id="mt-note"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Agenda / what to discuss..."
-          />
-        </div>
-
-        <DialogFooter className={FOOTER}>
-          <Button
-            type="button"
-            size="xl"
-            className="w-full"
-            disabled={!canConfirm || pending}
-            onClick={handleConfirm}
-          >
-            Save
-          </Button>
-        </DialogFooter>
+        {step === "date" ? (
+          <>
+            <StepHeader title={title} sub="Step 1/2 · Date" />
+            <DateStrip value={dateStr} onPick={setDateStr} />
+            <DialogFooter className={FOOTER}>
+              <Button
+                type="button"
+                size="xl"
+                className="w-full"
+                disabled={!dateStr}
+                onClick={goTime}
+              >
+                Next
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <StepHeader title="Time chuno" sub="Step 2/2 · Time" onBack={() => setStep("date")} />
+            <p className="text-center text-sm font-semibold text-primary">
+              {picked ? describeWhen(picked) : ""}
+            </p>
+            <TimeWheel value={time} onChange={setTime} />
+            {showNote ? (
+              <Textarea
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Agenda / what to discuss..."
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNote(true)}
+                className="mx-auto text-xs font-medium text-primary"
+              >
+                + Note
+              </button>
+            )}
+            <DialogFooter className={FOOTER}>
+              <Button
+                type="button"
+                size="xl"
+                className="w-full"
+                disabled={!canConfirm || pending}
+                onClick={handleConfirm}
+              >
+                Save
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

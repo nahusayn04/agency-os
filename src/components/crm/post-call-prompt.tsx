@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, MessageCircle } from "lucide-react";
+import { Check, ChevronRight, MessageCircle, X } from "lucide-react";
 import {
   getLeadSnapshotAction,
   updateLeadAction,
@@ -18,34 +18,30 @@ import {
   savePendingCall,
   toWhatsappNumber,
 } from "@/lib/crm/call-tracking";
+import { appendNote, formatCallbackLabel } from "@/components/crm/crm-dialogs";
 import {
-  appendNote,
-  formatCallbackLabel,
-  toDateInputValue,
-} from "@/components/crm/crm-dialogs";
+  DateStrip,
+  StepHeader,
+  TimeWheel,
+  buildDate,
+  dateToStr,
+  dateToTimeState,
+  defaultTimeFor,
+  describeWhen,
+  type TimeState,
+} from "@/components/crm/datetime-steps";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 const SHEET =
   "left-0 top-auto bottom-0 max-w-full translate-x-0 translate-y-0 rounded-b-none max-h-[92dvh] overflow-y-auto " +
   "sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl";
 const FOOTER = "sticky bottom-0 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]";
-const FIELD =
-  "flex h-11 w-full rounded-xl border border-input bg-card px-3 py-2 text-sm text-foreground outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20";
-
-function addDays(days: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d;
-}
 
 /**
  * Opens automatically after a call made from a CRM "Call" button.
@@ -60,13 +56,16 @@ export function PostCallPrompt() {
   const [lead, setLead] = useState<LeadSnapshot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [step, setStep] = useState<"stage" | "more" | "date" | "time">("stage");
+  const [target, setTarget] = useState<"callback" | "meeting">("callback");
   const [stage, setStage] = useState<LeadStage | null>(null);
   const [spoke, setSpoke] = useState(true);
-  const [cbDate, setCbDate] = useState("");
-  const [cbTime, setCbTime] = useState("");
-  const [mDate, setMDate] = useState("");
-  const [mTime, setMTime] = useState("");
+  const [cbAt, setCbAt] = useState<Date | null>(null);
+  const [mAt, setMAt] = useState<Date | null>(null);
+  const [dateStr, setDateStr] = useState("");
+  const [time, setTime] = useState<TimeState>({ h: 10, m: 0, pm: false });
   const [note, setNote] = useState("");
+  const [showNote, setShowNote] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const openFor = useCallback(async (id: string) => {
@@ -75,10 +74,10 @@ export function PostCallPrompt() {
     setLoadError(null);
     setError(null);
     setNote("");
-    setCbDate("");
-    setCbTime("");
-    setMDate("");
-    setMTime("");
+    setShowNote(false);
+    setCbAt(null);
+    setMAt(null);
+    setStep("stage");
     setSpoke(true);
     setOpen(true);
     void closePostCallNotifications();
@@ -156,18 +155,39 @@ export function PostCallPrompt() {
     void closePostCallNotifications();
   }
 
-  const cbPicked = cbDate && cbTime ? new Date(`${cbDate}T${cbTime}`) : null;
-  const cbValid = cbPicked !== null && cbPicked.getTime() > Date.now();
-  const cbTouched = Boolean(cbDate || cbTime);
   const needsMeeting = stage === "meeting" && lead?.stage !== "meeting";
-  const mPicked = mDate && mTime ? new Date(`${mDate}T${mTime}`) : null;
-  const meetingOk = !needsMeeting || (mPicked !== null && !isNaN(mPicked.getTime()));
-  const canSave =
-    Boolean(lead) && meetingOk && (!cbTouched || cbValid) && !saving;
+  const cbValid = cbAt !== null && cbAt.getTime() > Date.now();
+  const meetingOk = !needsMeeting || mAt !== null;
+  const canSave = Boolean(lead) && meetingOk && !saving;
 
-  function pickTomorrow() {
-    setCbDate(toDateInputValue(addDays(1)));
-    if (!cbTime) setCbTime("10:00");
+  const picked = dateStr ? buildDate(dateStr, time) : null;
+  const pickedOk = picked !== null && picked.getTime() > Date.now();
+
+  function startPick(t: "callback" | "meeting") {
+    const existing = t === "meeting" ? mAt : cbAt;
+    setTarget(t);
+    setDateStr(existing ? dateToStr(existing) : "");
+    setTime(existing ? dateToTimeState(existing) : { h: 10, m: 0, pm: false });
+    setStep("date");
+  }
+
+  function goTime() {
+    if (!dateStr) return;
+    const existing = target === "meeting" ? mAt : cbAt;
+    if (!existing || dateToStr(existing) !== dateStr) setTime(defaultTimeFor(dateStr));
+    setStep("time");
+  }
+
+  function confirmTime() {
+    if (!picked || !pickedOk) return;
+    if (target === "meeting") setMAt(picked);
+    else setCbAt(picked);
+    setStep("more");
+  }
+
+  function handleNext() {
+    if (needsMeeting && !mAt) startPick("meeting");
+    else setStep("more");
   }
 
   function handleSave() {
@@ -179,8 +199,8 @@ export function PostCallPrompt() {
         const r = await updateLeadStageAction(
           leadId,
           stage,
-          needsMeeting && mPicked
-            ? { datetime: mPicked.toISOString(), note: note.trim() }
+          needsMeeting && mAt
+            ? { datetime: mAt.toISOString(), note: note.trim() }
             : undefined
         );
         if (r?.error) {
@@ -191,10 +211,9 @@ export function PostCallPrompt() {
 
       // 2) spoke / callback / note
       const updates: Record<string, string> = {};
-      const nowIso = new Date().toISOString();
-      if (spoke) updates.last_contact = nowIso;
-      if (cbValid && cbPicked) {
-        updates.next_followup = cbPicked.toISOString();
+      if (spoke) updates.last_contact = new Date().toISOString();
+      if (cbValid && cbAt) {
+        updates.next_followup = cbAt.toISOString();
       } else if ((spoke || (stage && stage !== lead.stage)) && lead.next_followup) {
         // Call handled and no new callback chosen: clear an old/today
         // callback so the lead leaves "Today's Calls" (count goes down).
@@ -213,9 +232,7 @@ export function PostCallPrompt() {
         const label =
           "Call " +
           new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
-          (cbValid && cbPicked
-            ? ` (callback ${formatCallbackLabel(cbPicked.toISOString())})`
-            : "");
+          (cbValid && cbAt ? ` (callback ${formatCallbackLabel(cbAt.toISOString())})` : "");
         updates.notes = appendNote(base, label, trimmed);
       }
 
@@ -232,6 +249,10 @@ export function PostCallPrompt() {
     });
   }
 
+  const leadLine = lead
+    ? lead.name + (lead.business_name ? " · " + lead.business_name : "")
+    : "";
+
   return (
     <Dialog
       open={open}
@@ -240,168 +261,220 @@ export function PostCallPrompt() {
       }}
     >
       <DialogContent className={SHEET}>
-        <DialogHeader>
-          <DialogTitle>Call ho gayi?</DialogTitle>
-          {lead && (
-            <p className="text-sm text-muted-foreground">
-              {lead.name}
-              {lead.business_name ? " · " + lead.business_name : ""}
-            </p>
-          )}
-        </DialogHeader>
-
         {loadError && (
-          <p className="text-sm text-destructive">
-            {loadError}{" "}
-            <button
-              type="button"
-              className="underline"
-              onClick={() => close(true)}
-            >
-              Band karo
-            </button>
-          </p>
+          <>
+            <StepHeader title="Call ho gayi?" />
+            <p className="text-sm text-destructive">
+              {loadError}{" "}
+              <button type="button" className="underline" onClick={() => close(true)}>
+                Band karo
+              </button>
+            </p>
+          </>
         )}
 
         {!lead && !loadError && (
-          <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
+          <>
+            <StepHeader title="Call ho gayi?" />
+            <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
+          </>
         )}
 
-        {lead && (
+        {lead && step === "stage" && (
           <>
-            {/* Stage */}
-            <div className="space-y-1.5">
-              <Label>Stage</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {LEAD_STAGES.map((s) => (
-                  <Button
-                    key={s}
-                    type="button"
-                    size="lg"
-                    variant={stage === s ? "primary" : "outline"}
-                    className="w-full"
-                    onClick={() => setStage(s)}
-                  >
-                    {stage === s && <Check />}
-                    {LEAD_STAGE_LABELS[s]}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {needsMeeting && (
-              <div className="space-y-1.5">
-                <Label>Meeting kab hai? (zaroori)</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="date"
-                    value={mDate}
-                    min={toDateInputValue(new Date())}
-                    onChange={(e) => setMDate(e.target.value)}
-                    className={FIELD}
-                  />
-                  <input
-                    type="time"
-                    value={mTime}
-                    step={900}
-                    onChange={(e) => setMTime(e.target.value)}
-                    className={FIELD}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Callback */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label>Callback (optional)</Label>
-                <Button
+            <StepHeader title="Call ho gayi?" sub={`Step 1/2 · ${leadLine}`} />
+            <div className="grid grid-cols-3 gap-1.5">
+              {LEAD_STAGES.map((s) => (
+                <button
+                  key={s}
                   type="button"
-                  size="xs"
-                  variant={
-                    cbDate === toDateInputValue(addDays(1)) ? "primary" : "secondary"
+                  onClick={() => setStage(s)}
+                  className={
+                    "flex h-11 items-center justify-center gap-1 rounded-xl border px-1 text-[13px] font-medium transition-colors " +
+                    (stage === s
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-card text-foreground")
                   }
-                  onClick={pickTomorrow}
                 >
-                  Kal
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  value={cbDate}
-                  min={toDateInputValue(new Date())}
-                  onChange={(e) => setCbDate(e.target.value)}
-                  className={FIELD}
-                />
-                <input
-                  type="time"
-                  value={cbTime}
-                  step={900}
-                  onChange={(e) => setCbTime(e.target.value)}
-                  className={FIELD}
-                />
-              </div>
-              {cbTouched && !cbValid && (
-                <p className="text-xs text-destructive">
-                  Date aur time dono daalo (future ka).
-                </p>
-              )}
+                  {stage === s && <Check size={13} />}
+                  {LEAD_STAGE_LABELS[s]}
+                </button>
+              ))}
             </div>
-
-            {/* Note */}
-            <div className="space-y-1.5">
-              <Label htmlFor="postcall-note">Note (optional)</Label>
-              <Textarea
-                id="postcall-note"
-                rows={2}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Kya baat hui?"
-              />
-            </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={spoke}
-                onChange={(e) => setSpoke(e.target.checked)}
-                className="h-4 w-4"
-              />
-              Baat hui (Spoke mark karo)
-            </label>
-
-            {lead.phone && (
-              <a
-                href={"https://wa.me/" + toWhatsappNumber(lead.phone)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-green-50 text-sm font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400"
-              >
-                <MessageCircle size={16} /> WhatsApp bhejo
-              </a>
-            )}
-
-            {error && <p className="text-sm text-destructive">{error}</p>}
-
-            <DialogFooter className={FOOTER + " gap-2"}>
+            <DialogFooter className={FOOTER + " grid grid-cols-3 gap-2"}>
               <Button
                 type="button"
                 size="xl"
                 variant="ghost"
-                onClick={() => close(true)}
                 disabled={saving}
+                onClick={() => close(true)}
               >
                 Skip
               </Button>
               <Button
                 type="button"
                 size="xl"
-                className="flex-1"
+                variant="outline"
+                disabled={!canSave || needsMeeting}
+                onClick={handleSave}
+              >
+                {saving ? "…" : "Save"}
+              </Button>
+              <Button type="button" size="xl" onClick={handleNext}>
+                Next
+              </Button>
+            </DialogFooter>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </>
+        )}
+
+        {lead && step === "more" && (
+          <>
+            <StepHeader
+              title="Aage kya?"
+              sub={`Step 2/2 · ${leadLine}`}
+              onBack={() => setStep("stage")}
+            />
+
+            {needsMeeting && (
+              <button
+                type="button"
+                onClick={() => startPick("meeting")}
+                className="flex h-12 items-center justify-between rounded-xl border border-input bg-card px-3 text-sm"
+              >
+                <span className="text-muted-foreground">Meeting</span>
+                <span className="flex items-center gap-1 font-semibold text-primary">
+                  {mAt ? describeWhen(mAt) : "Set karo"} <ChevronRight size={16} />
+                </span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => startPick("callback")}
+                className="flex h-12 flex-1 items-center justify-between rounded-xl border border-input bg-card px-3 text-sm"
+              >
+                <span className="text-muted-foreground">Callback</span>
+                <span className="flex items-center gap-1 font-semibold text-primary">
+                  {cbAt ? describeWhen(cbAt) : "Set karo"} <ChevronRight size={16} />
+                </span>
+              </button>
+              {cbAt && (
+                <button
+                  type="button"
+                  aria-label="Callback hatao"
+                  onClick={() => setCbAt(null)}
+                  className="flex h-12 w-12 items-center justify-center rounded-xl border border-input bg-card text-muted-foreground"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {showNote && (
+              <Textarea
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Kya baat hui?"
+              />
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              {!showNote && (
+                <button
+                  type="button"
+                  onClick={() => setShowNote(true)}
+                  className="h-9 rounded-full border border-input bg-card px-3 text-xs font-medium"
+                >
+                  + Note
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSpoke((v) => !v)}
+                className={
+                  "flex h-9 items-center gap-1 rounded-full border px-3 text-xs font-medium " +
+                  (spoke
+                    ? "border-primary bg-accent text-primary"
+                    : "border-input bg-card text-muted-foreground")
+                }
+              >
+                {spoke && <Check size={12} />} Baat hui
+              </button>
+              {lead.phone && (
+                <a
+                  href={"https://wa.me/" + toWhatsappNumber(lead.phone)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-9 items-center gap-1 rounded-full bg-green-50 px-3 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                >
+                  <MessageCircle size={13} /> WhatsApp
+                </a>
+              )}
+            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <DialogFooter className={FOOTER}>
+              <Button
+                type="button"
+                size="xl"
+                className="w-full"
                 disabled={!canSave}
                 onClick={handleSave}
               >
                 {saving ? "Saving…" : "Save"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {lead && step === "date" && (
+          <>
+            <StepHeader
+              title={target === "meeting" ? "Meeting kab?" : "Callback kab?"}
+              sub="Date"
+              onBack={() => setStep(target === "meeting" ? "stage" : "more")}
+            />
+            <DateStrip value={dateStr} onPick={setDateStr} />
+            <DialogFooter className={FOOTER}>
+              <Button
+                type="button"
+                size="xl"
+                className="w-full"
+                disabled={!dateStr}
+                onClick={goTime}
+              >
+                Next
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {lead && step === "time" && (
+          <>
+            <StepHeader title="Time chuno" sub="Time" onBack={() => setStep("date")} />
+            <p
+              className={
+                "text-center text-sm font-semibold " +
+                (pickedOk ? "text-primary" : "text-destructive")
+              }
+            >
+              {picked ? describeWhen(picked) : ""}
+              {picked && !pickedOk ? " — future ka time chuno" : ""}
+            </p>
+            <TimeWheel value={time} onChange={setTime} />
+            <DialogFooter className={FOOTER}>
+              <Button
+                type="button"
+                size="xl"
+                className="w-full"
+                disabled={!pickedOk}
+                onClick={confirmTime}
+              >
+                Done
               </Button>
             </DialogFooter>
           </>
