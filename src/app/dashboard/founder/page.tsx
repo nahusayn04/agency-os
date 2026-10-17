@@ -5,10 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getWeekStartDateString } from "@/lib/performance/week";
 import { getFounderCommitmentForWeek } from "@/lib/founder-commitment/actions";
-import { getAllGodModeOverrides } from "@/lib/performance/actions";
+import { buildCashflowKpis, getCashflowSummary } from "@/lib/cashflow/summary";
 import { WeeklyCommitmentCard } from "@/components/dashboard/weekly-commitment-card";
-import { OverrideHistoryTable } from "@/components/dashboard/override-history-table";
-import { TeamProfilesList } from "@/components/dashboard/team-profiles-list";
+import { FadeIn } from "@/components/dashboard/fade-in";
 import { AttendanceCard } from "@/components/dashboard/attendance-card";
 import { FlashTaskCard } from "@/components/dashboard/flash-task-card";
 import { getTodayDateString } from "@/lib/auth/attendance";
@@ -37,7 +36,7 @@ export default async function FounderDashboardPage() {
 
   const [
     commitment,
-    overrides,
+    cashflow,
     userRowResult,
     todayAttendanceResult,
     teamMembersResult,
@@ -54,8 +53,9 @@ export default async function FounderDashboardPage() {
     offDayInfo,
     coldCallTasksResult,
     myFlashTaskResult,
-  ] = await Promise.all([    getFounderCommitmentForWeek(weekStart),
-    getAllGodModeOverrides(),
+  ] = await Promise.all([
+    getFounderCommitmentForWeek(weekStart),
+    getCashflowSummary(supabase),
     admin
       .from("users")
       .select("is_checked_in, last_checkin_at, shift_start, shift_end, checkout_report_pending")
@@ -151,16 +151,6 @@ export default async function FounderDashboardPage() {
     (f) => f.status === "pending" || f.status === "submitted"
   ).length;
 
-  // Depends on `overrides` (needs the actor IDs from it), so this one
-  // has to run after the batch above resolves.
-  const actorIds = Array.from(new Set(overrides.map((row) => row.super_admin_id)));
-  const { data: actors } = await supabase
-    .from("users")
-    .select("id, name")
-    .in("id", actorIds.length ? actorIds : ["00000000-0000-0000-0000-000000000000"]);
-
-  const actorNames = new Map((actors ?? []).map((a) => [a.id, a.name]));
-
   const coldCallTasks = coldCallTasksResult.data ?? [];
   const memberNameMap = new Map((teamMembers ?? []).map((m) => [m.id, m.name]));
   const coldCallSubmittedCount = coldCallTasks.filter(
@@ -205,6 +195,7 @@ export default async function FounderDashboardPage() {
         todayCalls={todayCalls}
         canImport
         canCreateTask
+        cashflow={cashflow ? { kpis: buildCashflowKpis(cashflow), months: cashflow.months } : undefined}
         flashTask={myFlashTask ? <FlashTaskCard task={myFlashTask} /> : undefined}
         checkIn={
           <AttendanceCard
@@ -222,11 +213,9 @@ export default async function FounderDashboardPage() {
         }
       />
 
-      <WeeklyCommitmentCard weekStart={weekStart} initialText={commitment?.commitment_text ?? ""} />
-
-
-      <TeamProfilesList members={teamMembers ?? []} />
-      <OverrideHistoryTable overrides={overrides} actorNames={actorNames} />
+      <FadeIn delay={0.2}>
+        <WeeklyCommitmentCard weekStart={weekStart} initialText={commitment?.commitment_text ?? ""} />
+      </FadeIn>
     </div>
   );
 }

@@ -83,19 +83,6 @@ export async function getGodModeOverridesForUserPeriod(
   return data ?? [];
 }
 
-export async function getAllGodModeOverrides() {
-  await requireUserProfile();
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("god_mode_overrides")
-    .select(
-      "id, action, target_entity, reason, created_at, super_admin_id"
-    )
-    .order("created_at", { ascending: false });
-
-  return data ?? [];
-}
-
 export async function overridePerformanceScoreAction(params: {
   targetUserId: string;
   periodStart: string;

@@ -66,6 +66,7 @@ export async function middleware(request: NextRequest) {
     isDashboard ||
     pathname.startsWith("/tasks") ||
     pathname.startsWith("/crm") ||
+    pathname.startsWith("/cashflow") ||
     pathname.startsWith("/attendance") ||
     pathname.startsWith("/messages") ||
     pathname.startsWith("/my-tasks") ||

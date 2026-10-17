@@ -6,6 +6,7 @@ import { animate, motion, useReducedMotion, type Variants } from "framer-motion"
 import { BookUser, CheckSquare, FileText, PhoneCall, Plus, Target, Upload, UserPlus } from "lucide-react";
 import { ImportLeadsDialog } from "@/components/crm/import-leads-dialog";
 import type { Kpi, OverviewData, OverviewLead } from "@/lib/dashboard/overview";
+import type { CashflowMonth } from "@/lib/cashflow/types";
 
 const container: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const item: Variants = {
@@ -159,6 +160,66 @@ function CrmChart({ chart }: { chart: OverviewData["chart"] }) {
   );
 }
 
+function KpiColumn({ kpis }: { kpis: Kpi[] }) {
+  return (
+    <motion.div variants={container} className="grid grid-cols-2 gap-2 lg:flex lg:flex-col">
+      {kpis.map((k) => {
+        const body = (
+          <motion.div
+            variants={item}
+            whileHover={{ x: 4 }}
+            className={`flex items-center justify-between gap-2 rounded-xl border border-l-4 bg-card px-3 py-2 shadow-card ${TONE[k.tone ?? "primary"]}`}
+          >
+            <div className="min-w-0">
+              <p className="truncate text-[11px] text-muted-foreground">{k.label}</p>
+              {k.hint && <p className="truncate text-[10px] text-muted-foreground/80">{k.hint}</p>}
+            </div>
+            <b className="whitespace-nowrap text-base">
+              <CountUp to={k.value} prefix={k.prefix} suffix={k.suffix} />
+            </b>
+          </motion.div>
+        );
+        return k.href ? <Link key={k.label} href={k.href}>{body}</Link> : <div key={k.label}>{body}</div>;
+      })}
+    </motion.div>
+  );
+}
+
+function CashflowChart({ months }: { months: CashflowMonth[] }) {
+  const reduce = useReducedMotion();
+  const W = 520;
+  const H = 120;
+  const max = Math.max(1, ...months.flatMap((m) => [m.received, m.spent]));
+  const slot = (W - 40) / months.length;
+  const bw = Math.min(18, slot / 3);
+
+  return (
+    <div>
+      <div className="mb-1 flex gap-3 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-green-500" />Received</span>
+        <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-primary" />Expenses</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H + 40}`} className="w-full" role="img" aria-label="Money received and expenses in the last 6 months">
+        {[0, 1, 2, 3].map((i) => (
+          <line key={i} x1="20" x2={W - 20} y1={8 + (i * H) / 3} y2={8 + (i * H) / 3} stroke="hsl(var(--border))" />
+        ))}
+        {months.map((m, i) => {
+          const cx = 20 + slot * i + slot / 2;
+          const hr = (m.received / max) * H;
+          const hs = (m.spent / max) * H;
+          return (
+            <g key={m.label + i}>
+              <motion.rect x={cx - bw - 1} width={bw} rx={3} fill="#22c55e" initial={reduce ? false : { height: 0, y: H + 8 }} animate={{ height: hr, y: H + 8 - hr }} transition={{ duration: 0.8, delay: 0.2 + i * 0.07, ease: "easeOut" }} />
+              <motion.rect x={cx + 1} width={bw} rx={3} fill="hsl(var(--primary))" initial={reduce ? false : { height: 0, y: H + 8 }} animate={{ height: hs, y: H + 8 - hs }} transition={{ duration: 0.8, delay: 0.25 + i * 0.07, ease: "easeOut" }} />
+              <text x={cx} y={H + 28} textAnchor="middle" fontSize="10" fill="hsl(var(--muted-foreground))">{m.label}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export function DashboardOverview({
   data,
   kpis,
@@ -169,6 +230,7 @@ export function DashboardOverview({
   canImport,
   canCreateTask,
   todayCalls,
+  cashflow,
 }: {
   data: OverviewData;
   kpis: Kpi[];
@@ -179,6 +241,7 @@ export function DashboardOverview({
   canImport: boolean;
   canCreateTask: boolean;
   todayCalls?: number;
+  cashflow?: { kpis: Kpi[]; months: CashflowMonth[] };
 }) {
   const [importOpen, setImportOpen] = useState(false);
 
@@ -304,26 +367,7 @@ export function DashboardOverview({
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[200px_1fr]">
-          <motion.div variants={container} className="grid grid-cols-2 gap-2 lg:flex lg:flex-col">
-            {kpis.map((k) => {
-              const body = (
-                <motion.div
-                  variants={item}
-                  whileHover={{ x: 4 }}
-                  className={`flex items-center justify-between gap-2 rounded-xl border border-l-4 bg-card px-3 py-2 shadow-card ${TONE[k.tone ?? "primary"]}`}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[11px] text-muted-foreground">{k.label}</p>
-                    {k.hint && <p className="truncate text-[10px] text-muted-foreground/80">{k.hint}</p>}
-                  </div>
-                  <b className="whitespace-nowrap text-base">
-                    <CountUp to={k.value} prefix={k.prefix} suffix={k.suffix} />
-                  </b>
-                </motion.div>
-              );
-              return k.href ? <Link key={k.label} href={k.href}>{body}</Link> : <div key={k.label}>{body}</div>;
-            })}
-          </motion.div>
+          <KpiColumn kpis={kpis} />
 
           <div className="grid gap-4">
             <motion.div variants={item} className={card}>
@@ -334,6 +378,20 @@ export function DashboardOverview({
             </motion.div>
           </div>
         </section>
+
+        {cashflow && (
+          <section className="grid gap-4 lg:grid-cols-[200px_1fr]">
+            <KpiColumn kpis={cashflow.kpis} />
+            <div className="grid gap-4">
+              <motion.div variants={item} className={card}>
+                <h3 className="mb-2 flex items-center justify-between text-sm font-semibold">
+                  Cashflow overview <span className="text-[11px] font-normal text-muted-foreground">Last 6 months</span>
+                </h3>
+                <CashflowChart months={cashflow.months} />
+              </motion.div>
+            </div>
+          </section>
+        )}
       </motion.div>
 
       {canImport && <ImportLeadsDialog open={importOpen} onClose={() => setImportOpen(false)} />}

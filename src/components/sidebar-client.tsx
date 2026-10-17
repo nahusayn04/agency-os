@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
-import { LayoutDashboard, ClipboardList, CheckSquare, BookUser, Mail, FileText, CalendarCheck, BarChart2, Target, Users, Wallet, PhoneCall, X, Menu } from "lucide-react";
+import { LayoutDashboard, ClipboardList, CheckSquare, BookUser, Mail, FileText, CalendarCheck, BarChart2, Target, Users, Wallet, PhoneCall, X, Menu, Receipt } from "lucide-react";
 
 export default function SidebarClient({ profile }: {
   profile: { id: string; name: string; role: string; email?: string; dashboardPath: string; todayCalls?: number }
@@ -101,6 +101,7 @@ export default function SidebarClient({ profile }: {
             <>
               <div className="my-3 border-t" />
               <p className={sectionLabel}>Admin</p>
+              <NavItem href="/cashflow" icon={Receipt} label="Cashflow" />
               <NavItem href="/admin/users" icon={Users} label="Users" />
             </>
           )}

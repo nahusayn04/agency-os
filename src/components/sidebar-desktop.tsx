@@ -17,6 +17,7 @@ import {
   Target,
   Users,
   Wallet,
+  Receipt,
   PhoneCall,
   ChevronsRight,
   LogOut,
@@ -143,6 +144,7 @@ export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink
             <>
               <div className="my-3 border-t" />
               {!collapsed && <p className={sectionLabel}>Admin</p>}
+              <NavLink href="/cashflow" icon={Receipt} label="Cashflow" collapsed={collapsed} />
               <NavLink href="/admin/users" icon={Users} label="Users" collapsed={collapsed} />
             </>
           )}
