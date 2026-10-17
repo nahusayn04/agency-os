@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 
@@ -12,6 +11,9 @@ export interface HolidayItem {
   end_date: string;
 }
 
+const fieldClass =
+  "h-11 w-full min-w-0 rounded-xl border bg-card px-3.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/30";
+
 function DateField({
   value,
   onChange,
@@ -20,25 +22,12 @@ function DateField({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="relative flex-1">
-      <input
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          WebkitTextFillColor: value ? "transparent" : "white",
-          colorScheme: "dark",
-        }}
-        className={`holiday-date-input w-full text-sm rounded glass-card px-2 py-1.5 ${
-          value ? "text-transparent" : "text-white"
-        }`}
-      />
-      {value && (
-        <span className="pointer-events-none absolute inset-0 flex items-center px-2 text-sm">
-          {formatDate(value)}
-        </span>
-      )}
-    </div>
+    <input
+      type="date"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`holiday-date-input ${fieldClass}`}
+    />
   );
 }
 
@@ -123,61 +112,69 @@ export function HolidaySettings({
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Off Days &amp; Holidays</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-lg border p-3 space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sunday off</p>
-          <div className="flex items-center gap-3">
-            <Button size="sm" disabled={togglePending} onClick={toggleSunday}>
-              {sundayOff ? "Sunday: OFF (turn ON)" : "Sunday: WORKING (turn OFF)"}
-            </Button>
-            {togglePending && <span className="text-xs text-muted-foreground">Saving…</span>}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            All active users will be notified when this is changed.
+    <div className="min-w-0 space-y-4 rounded-2xl border bg-card p-5 shadow-card lg:p-6">
+      <h2 className="text-base font-semibold">Off Days &amp; Holidays</h2>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/50 p-4">
+        <div>
+          <p className="text-sm font-semibold">Sunday off</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">All active users are notified when this changes.</p>
+          {toggleError && <p className="mt-1 text-xs text-destructive">{toggleError}</p>}
+        </div>
+        <button
+          type="button"
+          disabled={togglePending}
+          onClick={toggleSunday}
+          className="rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-primary transition-colors hover:bg-accent/70 disabled:opacity-60"
+        >
+          {togglePending ? "Saving…" : sundayOff ? "Sunday: OFF (turn ON)" : "Sunday: WORKING (turn OFF)"}
+        </button>
+      </div>
+
+      <div className="space-y-2.5">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Add holiday</p>
+        <input
+          className={fieldClass}
+          placeholder="Holiday name (e.g. Independence Day)"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2.5">
+          <DateField value={startDate} onChange={setStartDate} />
+          <span className="text-xs text-muted-foreground">to</span>
+          <DateField value={endDate} onChange={setEndDate} />
+        </div>
+        <Button className="rounded-xl" disabled={addPending} onClick={addHoliday}>
+          {addPending ? "Saving…" : "Add holiday"}
+        </Button>
+        {addError && <p className="text-xs text-destructive">{addError}</p>}
+      </div>
+
+      <div className="space-y-2">
+        {holidays.length === 0 && (
+          <p className="rounded-xl bg-muted/50 px-3 py-3 text-center text-xs text-muted-foreground">
+            No holidays added yet
           </p>
-          {toggleError && <p className="text-xs text-destructive">{toggleError}</p>}
-        </div>
-
-        <div className="rounded-lg border p-3 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Add holiday</p>
-          <input
-            className="w-full text-sm rounded glass-card px-2 py-1.5"
-            placeholder="Holiday name (e.g. Independence Day)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <div className="flex items-center gap-2">
-            <DateField value={startDate} onChange={setStartDate} />
-            <span className="text-xs text-muted-foreground shrink-0">to</span>
-            <DateField value={endDate} onChange={setEndDate} />
+        )}
+        {holidays.map((h) => (
+          <div key={h.id} className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-3 py-2.5 text-sm">
+            <div className="min-w-0">
+              <p className="truncate font-medium">{h.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDate(h.start_date)} → {formatDate(h.end_date)}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={addPending}
+              onClick={() => removeHoliday(h.id)}
+              className="shrink-0 rounded-xl bg-destructive/10 px-3 py-2 text-[13px] font-medium text-destructive disabled:opacity-60"
+            >
+              Remove
+            </button>
           </div>
-          <Button size="sm" disabled={addPending} onClick={addHoliday}>
-            {addPending ? "Saving…" : "Add holiday"}
-          </Button>
-          {addError && <p className="text-xs text-destructive">{addError}</p>}
-
-          <div className="space-y-2 pt-2">
-            {holidays.length === 0 && <p className="text-xs text-muted-foreground">No holidays added yet.</p>}
-            {holidays.map((h) => (
-              <div key={h.id} className="flex items-center justify-between rounded-lg border p-2 text-sm">
-                <div>
-                  <p className="font-medium">{h.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(h.start_date)} → {formatDate(h.end_date)}
-                  </p>
-                </div>
-                <Button size="sm" variant="outline" disabled={addPending} onClick={() => removeHoliday(h.id)}>
-                  Remove
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        ))}
+      </div>
+    </div>
   );
 }

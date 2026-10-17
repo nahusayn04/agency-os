@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -107,38 +106,42 @@ export function ColdCallSettings({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Cold Calls Target</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">
-            Daily target for the mandatory Cold Calls task. Members without a personal override use this
-            number.
-          </p>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              min={1}
-              value={defaultInput}
-              onChange={(e) => setDefaultInput(e.target.value)}
-              className="w-24"
-            />
-            <Button size="sm" disabled={defaultPending} onClick={handleSaveDefault}>
-              {defaultPending ? "Saving…" : "Save default"}
-            </Button>
-          </div>
-          {defaultError && <p className="text-xs text-red-500">{defaultError}</p>}
-        </div>
+    <div className="min-w-0 space-y-4 rounded-2xl border bg-card p-5 shadow-card lg:p-6">
+      <div>
+        <h2 className="text-base font-semibold">Cold Calls Target</h2>
+        <p className="mt-1 text-[13px] text-muted-foreground">
+          Daily target for the mandatory Cold Calls task. Members without a personal override use the default.
+        </p>
+      </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Per-member override</p>
-          {members.map((m) => (
-            <div key={m.id} className="flex items-center gap-2">
-              <span className="flex-1 text-sm truncate">
+      <div className="rounded-xl bg-muted/50 p-3 lg:px-4">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="min-w-[110px] flex-1 text-sm font-medium">Default target</span>
+          <Input
+            type="number"
+            min={1}
+            value={defaultInput}
+            onChange={(e) => setDefaultInput(e.target.value)}
+            className="h-10 w-20 rounded-xl"
+          />
+          <Button className="rounded-xl" size="sm" disabled={defaultPending} onClick={handleSaveDefault}>
+            {defaultPending ? "Saving…" : "Save default"}
+          </Button>
+        </div>
+        {defaultError && <p className="mt-2 text-xs text-destructive">{defaultError}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Per-member override</p>
+        {members.map((m) => (
+          <div key={m.id}>
+            <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 px-3 py-2">
+              <div className="grid h-8 w-8 flex-none place-items-center rounded-full bg-accent text-[13px] font-bold text-primary">
+                {m.name.charAt(0).toUpperCase()}
+              </div>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
                 {m.name}
-                {m.exempt && <span className="ml-2 text-xs text-muted-foreground">(off)</span>}
+                {m.exempt && <span className="ml-2 text-xs font-normal text-muted-foreground">(off)</span>}
               </span>
               <Input
                 type="number"
@@ -146,38 +149,37 @@ export function ColdCallSettings({
                 placeholder={String(defaultTarget)}
                 value={overrideInputs[m.id] ?? ""}
                 disabled={m.exempt}
-                onChange={(e) =>
-                  setOverrideInputs((cur) => ({ ...cur, [m.id]: e.target.value }))
-                }
-                className="w-20"
+                onChange={(e) => setOverrideInputs((cur) => ({ ...cur, [m.id]: e.target.value }))}
+                className="h-9 w-16 rounded-xl"
               />
               <Button
                 size="sm"
                 variant="outline"
+                className="rounded-xl"
                 disabled={overridePending === m.id || m.exempt}
                 onClick={() => handleSaveOverride(m.id)}
               >
                 {overridePending === m.id ? "…" : "Save"}
               </Button>
-              <Button
-                size="sm"
-                variant={m.exempt ? "default" : "destructive"}
+              <button
+                type="button"
                 disabled={exemptPending === m.id}
                 onClick={() => handleToggleExempt(m.id, !m.exempt)}
+                className={`rounded-xl px-3 py-2 text-[13px] font-medium disabled:opacity-60 ${
+                  m.exempt ? "bg-primary text-primary-foreground" : "bg-destructive/10 text-destructive"
+                }`}
               >
                 {exemptPending === m.id ? "…" : m.exempt ? "Turn on" : "Turn off"}
-              </Button>
+              </button>
             </div>
-          ))}
-          {members.map((m) =>
-            overrideError[m.id] ? (
-              <p key={`err-${m.id}`} className="text-xs text-red-500">
+            {overrideError[m.id] && (
+              <p className="mt-1 px-1 text-xs text-destructive">
                 {m.name}: {overrideError[m.id]}
               </p>
-            ) : null
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

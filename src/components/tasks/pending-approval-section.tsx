@@ -42,16 +42,6 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "completed", label: "Completed" },
 ];
 
-const BORDER_COLOR: Record<TaskStatus, string> = {
-  pending: "border-l-muted-foreground/40",
-  in_progress: "border-l-amber-500",
-  paused: "border-l-orange-500",
-  waiting_review: "border-l-purple-500",
-  revision_required: "border-l-red-500",
-  approved: "border-l-emerald-500",
-  completed: "border-l-emerald-500",
-};
-
 const BADGE_STYLE: Record<TaskStatus, string> = {
   pending: "bg-muted text-muted-foreground",
   in_progress: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
@@ -232,7 +222,7 @@ export function PendingApprovalSection({
               type="button"
               onClick={() => setTab("team")}
               className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                tab === "team" ? "bg-purple-600 text-white" : "text-muted-foreground"
+                tab === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               }`}
             >
               Team tasks
@@ -241,7 +231,7 @@ export function PendingApprovalSection({
               type="button"
               onClick={() => setTab("mine")}
               className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                tab === "mine" ? "bg-purple-600 text-white" : "text-muted-foreground"
+                tab === "mine" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
               }`}
             >
               My tasks
@@ -258,8 +248,8 @@ export function PendingApprovalSection({
             onClick={() => setFilter(f.key)}
             className={`shrink-0 whitespace-nowrap text-xs px-3 py-1.5 rounded-full transition-all duration-150 active:scale-95 ${
               filter === f.key
-                ? "bg-purple-600 text-white shadow-sm"
-                : "border text-foreground hover:bg-muted hover:border-purple-300 dark:hover:border-purple-700"
+                ? "bg-primary text-primary-foreground shadow-card"
+                : "border bg-card text-muted-foreground hover:text-foreground"
             }`}
           >
             {f.label}{" "}
@@ -301,9 +291,9 @@ export function PendingApprovalSection({
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <div className="flex flex-col gap-2">
+      <div className="grid items-start gap-3 lg:grid-cols-2">
         {visible.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">No tasks here.</p>
+          <p className="rounded-2xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground lg:col-span-2">No tasks here.</p>
         ) : (
           visible.map((task) => {
             const isExpanded = expandedId === task.id;
@@ -314,7 +304,7 @@ export function PendingApprovalSection({
             return (
               <div
                 key={task.id}
-                className={`glass-card rounded-xl border-l-4 ${BORDER_COLOR[task.status]} overflow-hidden transition-shadow hover:shadow-sm`}
+                className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-card"
               >
                 {/* Collapsed content — always visible, no click required */}
                 <div className="flex items-start justify-between gap-2 px-3.5 py-3 sm:px-4">

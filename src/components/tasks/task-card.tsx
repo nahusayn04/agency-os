@@ -39,16 +39,6 @@ const PRIORITY_STYLES: Record<string, string> = {
   low:    "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  pending:          "border-l-blue-500",
-  in_progress:      "border-l-amber-500",
-  paused:           "border-l-orange-500",
-  revision_required:"border-l-red-500",
-  waiting_review:   "border-l-purple-500",
-  approved:         "border-l-emerald-500",
-  completed:        "border-l-emerald-500",
-};
-
 const STATUS_CHIP: Record<string, string> = {
   pending:          "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   in_progress:      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
@@ -196,18 +186,14 @@ export function TaskCard({ task, assignerName, assignerRole }: TaskCardProps) {
   const isDone = task.status === "approved" || task.status === "completed";
   const showStartResume = task.status === "pending" || task.status === "revision_required" || task.status === "in_progress" || task.status === "paused";
   const startLabel = task.status === "in_progress" || accumulated > 0 ? "Resume" : "Start";
-  const borderColor = task.is_mandatory
-    ? "border-l-fuchsia-500"
-    : STATUS_STYLES[task.status] ?? "border-l-gray-400";
-
   return (
     <div
-      className={`glass-card rounded-xl border-l-4 ${borderColor} shadow-sm transition-all duration-200`}
+      className="min-w-0 rounded-2xl border bg-card shadow-card transition-all duration-200"
     >
       {/* ── COLLAPSED HEADER ── */}
       <button
         onClick={() => setExpanded((p) => !p)}
-        className="w-full text-left px-4 py-3 flex flex-col gap-2"
+        className="w-full text-left px-5 py-4 flex flex-col gap-2.5"
       >
         {/* Title — its own row */}
         <span className="break-words font-medium text-sm leading-snug">{task.title}</span>
@@ -255,7 +241,7 @@ export function TaskCard({ task, assignerName, assignerRole }: TaskCardProps) {
 
       {/* ── EXPANDED BODY ── */}
       {expanded && (
-        <div className="px-4 pb-4 space-y-4 border-t border-border/50 pt-3">
+        <div className="px-5 pb-5 space-y-4 border-t pt-4">
 
           {/* Description */}
           {task.description && (
@@ -339,7 +325,7 @@ export function TaskCard({ task, assignerName, assignerRole }: TaskCardProps) {
 
           {/* ── PAUSE FORM ── */}
           {view === "pausing" && (
-            <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+            <div className="rounded-xl p-3 space-y-2 bg-muted/50">
               <p className="text-sm font-medium">Pause reason</p>
               <Textarea
                 id={`pause-note-${task.id}`}
@@ -358,7 +344,7 @@ export function TaskCard({ task, assignerName, assignerRole }: TaskCardProps) {
 
           {/* ── SUBMIT FORM ── */}
           {view === "submitting" && (
-            <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+            <div className="rounded-xl p-3 space-y-3 bg-muted/50">
               <p className="text-sm font-medium">Submit Task</p>
 
               <div className="space-y-1">

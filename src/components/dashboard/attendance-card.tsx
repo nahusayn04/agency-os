@@ -42,7 +42,7 @@ function StrikeFineBadge({
 
 
   return (
-    <div className={`flex flex-col items-end gap-0.5 rounded-2xl px-3 py-1.5 text-right bg-destructive/10 border border-destructive/30`}>
+    <div className="flex flex-col items-start gap-0.5 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-left">
       <span className="flex items-center gap-1 text-[13px] font-semibold text-destructive">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-3.5">
           <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
@@ -202,12 +202,12 @@ export function AttendanceCard({
 
   return (
     <>
-      <Card className={`border-2 ${isCheckedIn ? "border-emerald-500/40 bg-emerald-950/20" : checkedOutToday ? "border-emerald-500/20" : "border-border"}`}>
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+      <Card className={`${isCheckedIn ? "border-emerald-500/40 bg-emerald-500/10" : checkedOutToday ? "border-emerald-500/30" : ""}`}>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0 pb-2">
           <CardTitle className="relative z-10 text-sm font-medium">Attendance</CardTitle>
-          <div className="relative z-10 flex flex-col items-end gap-1.5">
+          <div className="relative z-10 flex min-w-0 flex-col items-start gap-1.5">
             {isCheckedIn && (
-              <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -236,7 +236,7 @@ export function AttendanceCard({
           {isCheckedIn ? (
             <>
               <div>
-                <p className="text-3xl font-bold tabular-nums text-emerald-400">{elapsed}</p>
+                <p className="text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{elapsed}</p>
                 <p className="text-xs text-muted-foreground mt-1">Time since check-in</p>
               </div>
               <Button
@@ -250,11 +250,11 @@ export function AttendanceCard({
               </Button>
             </>
           ) : offDayReason ? (
-            <p className="text-sm text-amber-400 font-medium">
+            <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
               {offDayReason === "Sunday" ? "Sunday is off today." : `Today is a holiday — ${offDayReason}.`}
             </p>
           ) : checkedOutToday ? (
-            <p className="text-sm text-emerald-400 font-medium">Attendance marked for today ✓</p>
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Attendance marked for today ✓</p>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">You are not checked in today.</p>

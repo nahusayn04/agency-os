@@ -13,7 +13,9 @@ export default async function DashboardLayout({
     <div className="min-h-screen">
       <Header />
       <PushInit userId={profile.id} />
-      <main className="mx-auto max-w-5xl px-4 py-8 lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out">{children}</main>
+      <div className="min-w-0 transition-[margin-left] duration-300 ease-in-out lg:ml-[var(--sidebar-w)]">
+        <main className="mx-auto w-full max-w-7xl px-4 py-8">{children}</main>
+      </div>
     </div>
   );
 }

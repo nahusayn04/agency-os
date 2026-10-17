@@ -4,7 +4,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Header />
-      <main className="lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out p-6">{children}</main>
+      <div className="min-w-0 transition-[margin-left] duration-300 ease-in-out lg:ml-[var(--sidebar-w)]">
+        <main className="mx-auto w-full max-w-7xl px-4 py-8">{children}</main>
+      </div>
     </>
   );
 }

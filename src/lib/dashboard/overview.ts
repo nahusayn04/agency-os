@@ -66,14 +66,6 @@ function fmtDate(iso: string): string {
   });
 }
 
-const TASK_STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
-  in_progress: "Active",
-  paused: "Paused",
-  revision_required: "Revision",
-  waiting_review: "In review",
-};
-
 const FUNNEL: LeadStage[] = [
   "new_lead",
   "hot_lead",
@@ -116,12 +108,13 @@ export async function getOverviewData(supabase: Db, userId: string): Promise<Ove
       .order("next_followup", { ascending: true })
       .limit(5),
     supabase
-      .from("tasks")
-      .select("id, title, status, deadline", { count: "exact" })
-      .eq("assigned_to", userId)
-      .not("status", "in", OPEN_TASK)
-      .order("deadline", { ascending: true, nullsFirst: false })
-      .limit(6),
+      .from("todos")
+      .select("id, title, due_at", { count: "exact" })
+      .eq("user_id", userId)
+      .eq("done", false)
+      .order("due_at", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(8),
     supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
@@ -162,19 +155,13 @@ export async function getOverviewData(supabase: Db, userId: string): Promise<Ove
 
   const nowIso = new Date().toISOString();
   const todoRows: OverviewTodo[] = (todos.data ?? []).map((t) => {
-    const overdue = !!t.deadline && t.deadline < nowIso && t.status !== "waiting_review";
+    const overdue = !!t.due_at && t.due_at < nowIso;
     let due = "No deadline";
-    if (t.deadline) {
-      const sameDay = getTodayDateString(new Date(t.deadline)) === today;
-      due = sameDay ? `Due ${fmtTime(t.deadline)}` : overdue ? `Was due ${fmtDate(t.deadline)}` : `Due ${fmtDate(t.deadline)}`;
+    if (t.due_at) {
+      const sameDay = getTodayDateString(new Date(t.due_at)) === today;
+      due = sameDay ? `Due ${fmtTime(t.due_at)}` : overdue ? `Was due ${fmtDate(t.due_at)}` : `Due ${fmtDate(t.due_at)}`;
     }
-    return {
-      id: t.id,
-      title: t.title,
-      due,
-      status: overdue ? "Overdue" : TASK_STATUS_LABELS[t.status] ?? t.status,
-      overdue,
-    };
+    return { id: t.id, title: t.title, due, status: overdue ? "Overdue" : "Pending", overdue };
   });
 
   // Last 7 IST calendar days, oldest first.

@@ -27,8 +27,8 @@ function formatAssigneeLabel(
   return base;
 }
 
-const section = "space-y-4 rounded-2xl border bg-card p-4 shadow-card";
-const sectionTitle = "text-sm font-semibold";
+const section = "space-y-4 rounded-2xl border bg-card p-5 shadow-card lg:p-6";
+const sectionTitle = "text-base font-semibold";
 
 export async function CreateTaskForm({
   action,
@@ -39,7 +39,7 @@ export async function CreateTaskForm({
   const members = await getAssignableMembers();
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="grid items-start gap-4 lg:grid-cols-2">
       <section className={section}>
         <h2 className={sectionTitle}>Task</h2>
         <div className="space-y-2">
@@ -90,7 +90,7 @@ export async function CreateTaskForm({
       </section>
 
       {/* Submit stays pinned at the bottom (above the mobile tab bar). */}
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 -mx-4 border-t bg-card/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border">
+      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 -mx-4 lg:col-span-2 border-t bg-card/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border">
         <SubmitButton loadingText="Creating task..." className="h-11 w-full">
           Create task
         </SubmitButton>

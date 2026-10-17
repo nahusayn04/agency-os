@@ -56,7 +56,7 @@ export default async function MyTasksPage() {
   );
 
   const list = (items: TaskRow[]) => (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
       {items.map((t) => (
         <TaskCard
           key={t.id}
@@ -76,12 +76,12 @@ export default async function MyTasksPage() {
   ];
 
   const allContent = (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {groups
         .filter((g) => g.items.length > 0)
         .map((g) => (
-          <section key={g.label} className="space-y-3">
-            <h2 className="text-sm font-semibold">{g.label}</h2>
+          <section key={g.label} className="space-y-4">
+            <h2 className="text-base font-semibold">{g.label} <span className="text-sm font-normal text-muted-foreground">· {g.items.length}</span></h2>
             {list(g.items)}
           </section>
         ))}
@@ -89,13 +89,27 @@ export default async function MyTasksPage() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">My Tasks</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Tasks assigned to you for execution and submission.
         </p>
       </div>
+
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        {[
+          { label: "Active", value: activeTasks.length },
+          { label: "Pending", value: pendingTasks.length },
+          { label: "In Review", value: reviewTasks.length },
+          { label: "Done", value: doneTasks.length },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl border bg-card px-4 py-3 shadow-card lg:px-5 lg:py-4">
+            <p className="text-xs text-muted-foreground">{s.label}</p>
+            <p className="mt-1 text-2xl font-bold leading-tight lg:text-3xl">{s.value}</p>
+          </div>
+        ))}
+      </section>
 
       <TaskTabs
         tabs={[

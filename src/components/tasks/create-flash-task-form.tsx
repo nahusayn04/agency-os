@@ -9,7 +9,7 @@ const DURATIONS = [2, 3, 4];
 
 const field =
   "w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
-const section = "space-y-4 rounded-2xl border bg-card p-4 shadow-card";
+const section = "space-y-4 rounded-2xl border bg-card p-5 shadow-card lg:p-6";
 
 export function CreateFlashTaskForm({
   assignableUsers,
@@ -44,7 +44,7 @@ export function CreateFlashTaskForm({
       : "border-border bg-card text-muted-foreground hover:text-foreground");
 
   return (
-    <form id="flash-task-form" action={handleSubmit} className="space-y-4">
+    <form id="flash-task-form" action={handleSubmit} className="grid items-start gap-4 lg:grid-cols-2">
       <section className={section}>
         <h2 className="text-sm font-semibold">⚡ Flash task (anytime, hour-based)</h2>
         <div className="space-y-2">
@@ -127,12 +127,12 @@ export function CreateFlashTaskForm({
       </section>
 
       {error && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 lg:col-span-2">
           {error}
         </p>
       )}
 
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 -mx-4 border-t bg-card/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border">
+      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 -mx-4 lg:col-span-2 border-t bg-card/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:rounded-2xl lg:border">
         <Button type="submit" disabled={pending} className="h-11 w-full">
           {pending ? "Assigning…" : "Assign flash task"}
         </Button>

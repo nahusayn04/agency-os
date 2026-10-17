@@ -35,7 +35,7 @@ export default async function NewTaskPage({
       : "border-border bg-card text-muted-foreground");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4">
       <div className="relative flex items-center justify-center py-1">
         <Link
           href="/tasks"

@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { animate, motion, useReducedMotion, type Variants } from "framer-motion";
-import { BookUser, CheckSquare, FileText, PhoneCall, Plus, Target, Upload, UserPlus } from "lucide-react";
+import { BookUser, Check, CheckSquare, FileText, PhoneCall, Plus, Target, Trash2, Upload, UserPlus } from "lucide-react";
 import { ImportLeadsDialog } from "@/components/crm/import-leads-dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { DateStrip, StepHeader, TimeWheel, buildDate, defaultTimeFor, describeWhen, type TimeState } from "@/components/crm/datetime-steps";
+import { Button } from "@/components/ui/button";
+import { createTodoAction, completeTodoAction, deleteTodoAction } from "@/lib/todos/actions";
 import type { Kpi, OverviewData, OverviewLead } from "@/lib/dashboard/overview";
 import type { CashflowMonth } from "@/lib/cashflow/types";
 
@@ -220,6 +225,168 @@ function CashflowChart({ months }: { months: CashflowMonth[] }) {
   );
 }
 
+const SHEET =
+  "left-0 top-auto bottom-0 max-w-full translate-x-0 translate-y-0 rounded-b-none max-h-[90dvh] overflow-y-auto " +
+  "sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl";
+const FOOTER = "sticky bottom-0 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]";
+
+function TodoCard({ todos, count }: { todos: OverviewData["todos"]; count: number }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<"what" | "date" | "time">("what");
+  const [title, setTitle] = useState("");
+  const [dateStr, setDateStr] = useState("");
+  const [time, setTime] = useState<TimeState>({ h: 10, m: 0, pm: false });
+
+  const picked = dateStr ? buildDate(dateStr, time) : null;
+  const inFuture = picked !== null && picked.getTime() > Date.now();
+
+  function goTime() {
+    if (!dateStr) return;
+    setTime(defaultTimeFor(dateStr));
+    setStep("time");
+  }
+
+  function handleSave() {
+    if (!picked || !inFuture || !title.trim()) return;
+    const h24 = (time.h % 12) + (time.pm ? 12 : 0);
+    const fd = new FormData();
+    fd.set("title", title.trim());
+    fd.set("due", `${dateStr}T${String(h24).padStart(2, "0")}:${String(time.m).padStart(2, "0")}`);
+    setError(null);
+    startTransition(async () => {
+      const res = await createTodoAction(fd);
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      setOpen(false);
+      router.refresh();
+    });
+  }
+
+  function run(id: string, fn: (id: string) => Promise<{ error?: string }>) {
+    setBusyId(id);
+    startTransition(async () => {
+      await fn(id);
+      setBusyId(null);
+      router.refresh();
+    });
+  }
+
+  const input =
+    "h-11 w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
+
+  return (
+    <>
+      <motion.div variants={item} className={card}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">
+            To-do list <span className="font-normal text-muted-foreground">· {count}</span>
+          </h3>
+          <motion.button
+            type="button"
+            whileHover={{ rotate: 90 }}
+            onClick={() => {
+              setError(null);
+              setStep("what");
+              setTitle("");
+              setDateStr("");
+              setOpen(true);
+            }}
+            aria-label="Add to-do"
+            className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground"
+          >
+            <Plus size={18} />
+          </motion.button>
+        </div>
+        <div className="space-y-2">
+          {todos.length === 0 ? (
+            <Empty>Nothing on your list. Tap + to add one.</Empty>
+          ) : (
+            todos.map((t) => (
+              <div
+                key={t.id}
+                className={`flex items-center gap-3 rounded-xl bg-muted/50 px-3 py-2.5 transition-opacity ${busyId === t.id ? "opacity-50" : ""}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => run(t.id, completeTodoAction)}
+                  disabled={busyId === t.id}
+                  aria-label={`Mark "${t.title}" done`}
+                  className="grid h-6 w-6 flex-none place-items-center rounded-full border-2 border-primary/40 text-transparent transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Check size={14} strokeWidth={3} />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{t.title}</p>
+                  <p className={`text-[11px] ${t.overdue ? "text-destructive" : "text-muted-foreground"}`}>{t.due}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => run(t.id, deleteTodoAction)}
+                  disabled={busyId === t.id}
+                  aria-label={`Delete "${t.title}"`}
+                  className="grid h-8 w-8 flex-none place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </motion.div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className={SHEET}>
+          {step === "what" && (
+            <>
+              <StepHeader title="New to-do" sub="Step 1/2 · Kya karna hai aur kab tak?" />
+              <input
+                id="todo-title"
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={200}
+                placeholder="e.g. Call the supplier"
+                className={input}
+              />
+              <p className="text-xs font-medium text-muted-foreground">Deadline date</p>
+              <DateStrip value={dateStr} onPick={setDateStr} />
+              <DialogFooter className={FOOTER}>
+                <Button type="button" size="xl" className="w-full" disabled={!dateStr || !title.trim()} onClick={goTime}>
+                  Next
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+          {step === "time" && (
+            <>
+              <StepHeader title="Time chuno" sub="Step 2/2 · Time" onBack={() => setStep("what")} />
+              <p className={"text-center text-sm font-semibold " + (inFuture ? "text-primary" : "text-destructive")}>
+                {picked ? describeWhen(picked) : ""}
+                {picked && !inFuture ? " — future ka time chuno" : ""}
+              </p>
+              <TimeWheel value={time} onChange={setTime} />
+              {error && (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+              )}
+              <DialogFooter className={FOOTER}>
+                <Button type="button" size="xl" className="w-full" disabled={!inFuture || pending} onClick={handleSave}>
+                  {pending ? "Adding…" : "Add to-do"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export function DashboardOverview({
   data,
   kpis,
@@ -228,7 +395,6 @@ export function DashboardOverview({
   chips,
   quickActions,
   canImport,
-  canCreateTask,
   todayCalls,
   cashflow,
 }: {
@@ -289,8 +455,8 @@ export function DashboardOverview({
           )}
         </motion.div>
 
-        <section className="grid gap-4 lg:grid-cols-[0.9fr_1.2fr_1.2fr]">
-          <motion.div variants={item} className="flex flex-col justify-center rounded-3xl bg-primary p-5 text-primary-foreground shadow-card">
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(220px,0.8fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]">
+          <motion.div variants={item} className="flex min-w-0 flex-col justify-center rounded-2xl bg-primary p-5 text-primary-foreground shadow-card lg:col-span-2 xl:col-span-1">
             <p className="text-sm text-white/80">Tasks today</p>
             <p className="text-5xl font-bold leading-tight">
               <CountUp to={data.tasksToday} />
@@ -311,7 +477,7 @@ export function DashboardOverview({
             )}
           </motion.div>
 
-          <motion.div variants={item} className="flex flex-col gap-4">
+          <motion.div variants={item} className="flex min-w-0 flex-col gap-4">
             {checkIn}
             {flashTask}
             <div className={card}>
@@ -322,51 +488,19 @@ export function DashboardOverview({
             </div>
           </motion.div>
 
-          <div className="flex flex-col gap-4 self-start">
+          <div className="flex min-w-0 flex-col gap-4 self-start">
           <motion.div variants={item} className={card}>
             <h3 className="mb-3 text-sm font-semibold">Follow-ups due</h3>
             <div className="space-y-2">
               {data.followups.length === 0 ? <Empty>No follow-ups due</Empty> : data.followups.map((f) => <LeadRow key={f.id} lead={f} kind="followup" />)}
             </div>
           </motion.div>
-            <motion.div variants={item} className={card}>
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">
-                  To-do list <span className="font-normal text-muted-foreground">· {data.todosCount}</span>
-                </h3>
-                {canCreateTask && (
-                  <motion.div whileHover={{ rotate: 90 }}>
-                    <Link href="/tasks/new" aria-label="New task" className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground">
-                      <Plus size={18} />
-                    </Link>
-                  </motion.div>
-                )}
-              </div>
-              <div className="space-y-2">
-                {data.todos.length === 0 ? (
-                  <Empty>Nothing pending. Nice work!</Empty>
-                ) : (
-                  data.todos.map((t) => (
-                    <motion.div key={t.id} whileHover={{ x: 4 }}>
-                      <Link href="/my-tasks" className="flex items-center gap-3 rounded-xl bg-muted/50 px-3 py-2.5">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{t.title}</p>
-                          <p className="text-[11px] text-muted-foreground">{t.due}</p>
-                        </div>
-                        <span className={`rounded-lg px-2.5 py-0.5 text-[10px] font-medium ${t.overdue ? "bg-destructive/10 text-destructive" : "bg-accent text-primary"}`}>
-                          {t.status}
-                        </span>
-                      </Link>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-            </motion.div>
+            <TodoCard todos={data.todos} count={data.todosCount} />
 
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[200px_1fr]">
+        <section className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)]">
           <KpiColumn kpis={kpis} />
 
           <div className="grid gap-4">
@@ -380,7 +514,7 @@ export function DashboardOverview({
         </section>
 
         {cashflow && (
-          <section className="grid gap-4 lg:grid-cols-[200px_1fr]">
+          <section className="grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)]">
             <KpiColumn kpis={cashflow.kpis} />
             <div className="grid gap-4">
               <motion.div variants={item} className={card}>
