@@ -368,7 +368,7 @@ function SpokeChip({
 }: {
   lead: KanbanLead;
   disabled: boolean;
-  onSave: (iso: string, note: string, callbackIso: string) => void;
+  onSave: (iso: string, note: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -393,10 +393,9 @@ function SpokeChip({
         open={open}
         onOpenChange={setOpen}
         pending={disabled}
-        initialCallbackIso={lead.next_followup}
-        onSave={(iso, note, callbackIso) => {
+        onSave={(iso, note) => {
           setOpen(false);
-          onSave(iso, note, callbackIso);
+          onSave(iso, note);
         }}
       />
     </>
@@ -823,8 +822,8 @@ function LeadCard({
         <SpokeChip
           lead={lead}
           disabled={pending}
-          onSave={(iso, note, callbackIso) =>
-            onDateChange(lead.id, "last_contact", iso, note, callbackIso)
+          onSave={(iso, note) =>
+            onDateChange(lead.id, "last_contact", iso, note)
           }
         />
         <CallbackChip

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Plus } from "lucide-react";
 import { createLeadAction } from "@/lib/crm/actions";
@@ -141,61 +141,106 @@ function BigChoice({
 /* 1. Spoke                                                                   */
 /* -------------------------------------------------------------------------- */
 
+/** One slidable row of earlier days (before yesterday), oldest on the left. */
+function PastDateStrip({
+  value,
+  onPick,
+}: {
+  value: string;
+  onPick: (dateStr: string) => void;
+}) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+
+  const days: Date[] = [];
+  for (let i = 14; i >= 2; i--) {
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    days.push(d);
+  }
+
+  // Start at the newest end so the days closest to today are visible.
+  useEffect(() => {
+    const el = rowRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, []);
+
+  return (
+    <div
+      ref={rowRef}
+      className="scrollbar-hide -mx-4 flex snap-x gap-2 overflow-x-auto px-4 py-1"
+    >
+      {days.map((d) => {
+        const ds = dateToStr(d);
+        const selected = ds === value;
+        return (
+          <button
+            key={ds}
+            type="button"
+            onClick={() => onPick(ds)}
+            className={
+              "flex h-[72px] w-[58px] shrink-0 snap-start flex-col items-center justify-center rounded-2xl border text-center transition-colors " +
+              (selected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-input bg-card text-foreground")
+            }
+          >
+            <span className="text-[11px] font-medium opacity-80">
+              {d.toLocaleDateString("en-IN", { weekday: "short" })}
+            </span>
+            <span className="text-xl font-bold leading-tight">
+              {d.getDate()}
+            </span>
+            <span className="text-[10px] opacity-70">
+              {d.toLocaleDateString("en-IN", { month: "short" })}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function SpokeDialog({
   open,
   onOpenChange,
   pending,
-  initialCallbackIso,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pending: boolean;
-  /** Existing future callback, if any — preselected in the callback picker. */
-  initialCallbackIso?: string | null;
-  onSave: (iso: string, note: string, callbackIso: string) => void;
+  onSave: (iso: string, note: string) => void;
 }) {
   const today = toDateInputValue(new Date());
   const yesterday = toDateInputValue(addDays(-1));
 
   const [date, setDate] = useState(today);
   const [note, setNote] = useState("");
-  const [cbDate, setCbDate] = useState("");
-  const [cbTime, setCbTime] = useState<TimeState>({ h: 10, m: 0, pm: false });
 
   useEffect(() => {
     if (!open) return;
     setDate(toDateInputValue(new Date()));
     setNote("");
-    const base = initialCallbackIso ? new Date(initialCallbackIso) : null;
-    const usable = base && !isNaN(base.getTime()) && base.getTime() > Date.now();
-    if (usable) {
-      setCbDate(dateToStr(base));
-      setCbTime(dateToTimeState(base));
-    } else {
-      setCbDate(dateToStr(addDays(1)));
-      setCbTime({ h: 10, m: 0, pm: false });
-    }
-  }, [open, initialCallbackIso]);
+  }, [open]);
 
-  const valid = Boolean(date) && date <= today;
-  const cbPicked = cbDate ? buildDate(cbDate, cbTime) : null;
-  const cbOk = cbPicked !== null && cbPicked.getTime() > Date.now();
-
-  function onPickCbDate(ds: string) {
-    const todayStr = dateToStr(new Date());
-    if (ds === todayStr) setCbTime(defaultTimeFor(ds));
-    else if (cbDate === todayStr) setCbTime({ h: 10, m: 0, pm: false });
-    setCbDate(ds);
-  }
+  const picked = new Date(`${date}T12:00:00`);
+  const pickedLabel = isNaN(picked.getTime())
+    ? ""
+    : (date === today
+        ? "Today, "
+        : date === yesterday
+          ? "Yesterday, "
+          : picked.toLocaleDateString("en-IN", { weekday: "short" }) + ", ") +
+      shortDate(picked);
 
   function handleSave() {
-    if (!valid || !cbPicked || !cbOk) return;
+    if (!date) return;
     const iso =
       date === today
         ? new Date().toISOString()
         : new Date(`${date}T12:00:00`).toISOString();
-    onSave(iso, note.trim(), cbPicked.toISOString());
+    onSave(iso, note.trim());
   }
 
   return (
@@ -218,49 +263,28 @@ export function SpokeDialog({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="spoke-date">Or pick a date</Label>
-          <input
-            id="spoke-date"
-            type="date"
-            value={date}
-            max={today}
-            onChange={(e) => setDate(e.target.value)}
-            className={NATIVE_FIELD}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Callback (required)</Label>
-          <DateStrip value={cbDate} onPick={onPickCbDate} />
-          <p
-            className={
-              "text-center text-sm font-semibold " +
-              (cbOk ? "text-primary" : "text-destructive")
-            }
-          >
-            {cbPicked ? describeWhen(cbPicked) : ""}
-            {cbPicked && !cbOk ? " — pick a future time" : ""}
+          <Label>Or an earlier date</Label>
+          <PastDateStrip value={date} onPick={setDate} />
+          <p className="text-center text-sm font-semibold text-primary">
+            {pickedLabel}
           </p>
-          <TimeWheel value={cbTime} onChange={setCbTime} />
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="spoke-note">Note (optional)</Label>
-          <Textarea
-            id="spoke-note"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="What did you talk about?"
-          />
-        </div>
+        <Input
+          id="spoke-note"
+          aria-label="Note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Add a note (optional)"
+          autoComplete="off"
+        />
 
         <DialogFooter className={FOOTER}>
           <Button
             type="button"
             size="xl"
             className="w-full"
-            disabled={!valid || !cbOk || pending}
+            disabled={!date || pending}
             onClick={handleSave}
           >
             Save
