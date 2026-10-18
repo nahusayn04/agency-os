@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Plus } from "lucide-react";
 import { createLeadAction } from "@/lib/crm/actions";
-import { LEAD_STAGE_LABELS, type LeadStage } from "@/lib/types/crm";
+import { LEAD_STAGE_LABELS, LEAD_TEXT_MAX_LENGTH, type LeadStage } from "@/lib/types/crm";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -621,10 +621,14 @@ export function NewLeadDialog({
     }
 
     // The leads table has a single text column for this; keep both parts.
-    const businessName = business ? `${business} — ${address}` : address;
+    // Anything beyond the limit is cut (same as import), not rejected.
+    const businessName = (business ? `${business} — ${address}` : address).slice(
+      0,
+      LEAD_TEXT_MAX_LENGTH
+    );
 
     const fd = new FormData();
-    fd.set("name", name);
+    fd.set("name", name.slice(0, LEAD_TEXT_MAX_LENGTH));
     fd.set("business_name", businessName);
     fd.set("phone", phone);
     fd.set("stage", "new_lead");
@@ -664,11 +668,11 @@ export function NewLeadDialog({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="nl-name">Name *</Label>
-              <Input id="nl-name" name="name" placeholder="Contact person" autoComplete="off" />
+              <Input id="nl-name" name="name" placeholder="Contact person" autoComplete="off" maxLength={LEAD_TEXT_MAX_LENGTH} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="nl-address">Address *</Label>
-              <Input id="nl-address" name="address" placeholder="Area, city" autoComplete="off" />
+              <Input id="nl-address" name="address" placeholder="Area, city" autoComplete="off" maxLength={LEAD_TEXT_MAX_LENGTH} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="nl-phone">Phone *</Label>
@@ -684,7 +688,7 @@ export function NewLeadDialog({
 
             <div className="space-y-1.5">
               <Label htmlFor="nl-business">Business (optional)</Label>
-              <Input id="nl-business" name="business" placeholder="Clinic / shop name" autoComplete="off" />
+              <Input id="nl-business" name="business" placeholder="Clinic / shop name" autoComplete="off" maxLength={LEAD_TEXT_MAX_LENGTH} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
