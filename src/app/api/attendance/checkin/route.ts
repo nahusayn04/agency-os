@@ -176,6 +176,13 @@ if (!lockedUsers || lockedUsers.length === 0) {
         message: `${profile.name} checked in after shift end (${timeStr}) — attendance is still marked "absent". Review and manually adjust if needed.`,
         link: "/attendance",
         type: "attendance",
+        group: {
+          key: "checkin-alerts",
+          mode: "append",
+          windowMin: 30,
+          cap: 5,
+          title: (n) => `${n} check-in alerts`,
+        },
       });
     } else if (status === "late" || evaluation.graceUsed) {
       const timeStr = now.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
@@ -188,6 +195,13 @@ if (!lockedUsers || lockedUsers.length === 0) {
         message: note,
         link: "/attendance",
         type: "attendance",
+        group: {
+          key: "checkin-alerts",
+          mode: "append",
+          windowMin: 30,
+          cap: 5,
+          title: (n) => `${n} check-in alerts`,
+        },
       });
     }
 

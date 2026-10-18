@@ -9,6 +9,7 @@ import {
   getLatestNotifications,
   clearAllNotifications,
   deleteNotificationAction,
+  markNotificationReadAction,
   updateLeaveRequestStatusAction,
 } from "@/lib/messages/actions";
 
@@ -19,8 +20,12 @@ interface Notification {
   is_read: boolean;
   link?: string;
   created_at: string;
+  updated_at?: string;
   type?: string | null;
   reference_id?: string | null;
+  priority?: "normal" | "urgent";
+  item_count?: number;
+  needs_action?: boolean;
 }
 
 // Notifications whose reference_id points to a `messages` row that can be
@@ -111,16 +116,28 @@ function SwipeableRow({
           className="flex justify-between items-start gap-2 cursor-pointer"
           onClick={() => onOpen(notification)}
         >
-          <span className="font-semibold block break-words">{notification.title}</span>
+          <span className="font-semibold block break-words">
+            {notification.priority === "urgent" && (
+              <span className="mr-1.5 rounded-full bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-red-600">
+                Urgent
+              </span>
+            )}
+            {notification.title}
+            {(notification.item_count ?? 1) > 1 && !/\(\d+\)\s*$/.test(notification.title) && (
+              <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                ×{notification.item_count}
+              </span>
+            )}
+          </span>
           {notification.link && (
             <span className="text-primary shrink-0" aria-hidden="true">
               →
             </span>
           )}
         </div>
-        <p className="text-muted-foreground mt-0.5">{notification.message}</p>
+        <p className="text-muted-foreground mt-0.5 whitespace-pre-line">{notification.message}</p>
         <span className="text-[10px] text-muted-foreground block mt-1">
-        {formatDateTime(notification.created_at)}
+        {formatDateTime(notification.updated_at ?? notification.created_at)}
         </span>
 
         {isActionable && (
@@ -173,7 +190,30 @@ export function NotificationBell({ userId }: { userId: string }) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev].slice(0, 20));
+          const incoming = payload.new as Notification;
+          setNotifications((prev) =>
+            [incoming, ...prev.filter((n) => n.id !== incoming.id)].slice(0, 20)
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          // Grouped and repeated notifications are updated in place; bring
+          // them back to the top so a new count is never missed.
+          const incoming = payload.new as Notification;
+          setNotifications((prev) => {
+            const exists = prev.some((n) => n.id === incoming.id);
+            if (!exists && incoming.is_read) return prev;
+            const merged = exists
+              ? { ...prev.find((n) => n.id === incoming.id)!, ...incoming }
+              : incoming;
+            const rest = prev.filter((n) => n.id !== incoming.id);
+            return incoming.is_read && exists
+              ? prev.map((n) => (n.id === incoming.id ? merged : n))
+              : [merged, ...rest].slice(0, 20);
+          });
         }
       )
       .subscribe();
@@ -208,7 +248,8 @@ export function NotificationBell({ userId }: { userId: string }) {
   const handleClearAll = async () => {
     const previous = notifications;
     setClearing(true);
-    setNotifications([]);
+    // Reminders waiting for action are never cleared from here.
+    setNotifications((prev) => prev.filter((n) => n.needs_action));
     const res = await clearAllNotifications();
     setClearing(false);
     if (res?.error) {
@@ -229,10 +270,11 @@ export function NotificationBell({ userId }: { userId: string }) {
       if (n.link) {
         router.push(n.link);
       }
-      // Once opened, a notification is done its job — remove it, same as
-      // swipe-delete, instead of leaving it sitting there as "read".
-      setNotifications((prev) => prev.filter((item) => item.id !== n.id));
-      deleteNotificationAction(n.id).catch(() => {});
+      // Keep it as history on the Notifications page; just mark it read.
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, is_read: true } : item))
+      );
+      markNotificationReadAction(n.id).catch(() => {});
     },
     [router]
   );
@@ -290,11 +332,18 @@ export function NotificationBell({ userId }: { userId: string }) {
             )}
           </div>
 
-          {notifications.length > 0 && (
-            <p className="text-[9px] text-muted-foreground text-center mt-2 pt-1 border-t border-border">
-              Swipe left to remove a notification
-            </p>
-          )}
+          <div className="mt-2 flex items-center justify-between border-t border-border px-2 pt-2">
+            <span className="text-[9px] text-muted-foreground">Swipe left to remove</span>
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                router.push("/notifications");
+              }}
+              className="text-[11px] font-semibold text-primary hover:underline"
+            >
+              View all →
+            </button>
+          </div>
         </div>
       )}
     </div>

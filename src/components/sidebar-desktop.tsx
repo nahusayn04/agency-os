@@ -19,6 +19,7 @@ import {
   Wallet,
   Receipt,
   PhoneCall,
+  Bell,
   ChevronsRight,
   LogOut,
   type LucideIcon,
@@ -76,9 +77,10 @@ interface SidebarDesktopProps {
   isFounder: boolean;
   showTasksLink: boolean;
   todayCalls?: number;
+  unreadNotifications?: number;
 }
 
-export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink, todayCalls = 0 }: SidebarDesktopProps) {
+export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink, todayCalls = 0, unreadNotifications = 0 }: SidebarDesktopProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -129,6 +131,7 @@ export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink
           <NavLink href="/my-tasks" icon={CheckSquare} label="My Tasks" collapsed={collapsed} />
           <NavLink href="/crm/today" icon={PhoneCall} label="Today's Calls" collapsed={collapsed} badge={todayCalls} />
           <NavLink href="/crm" icon={BookUser} label="CRM" collapsed={collapsed} />
+          <NavLink href="/notifications" icon={Bell} label="Notifications" collapsed={collapsed} badge={unreadNotifications} />
           <NavLink href="/messages" icon={Mail} label="Messages" collapsed={collapsed} />
           <NavLink href="/reports" icon={FileText} label="Reports" collapsed={collapsed} />
 

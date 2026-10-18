@@ -1,6 +1,6 @@
 import { getAssignableUsers } from "@/lib/crm/actions";
 import { requireUserProfile } from "@/lib/auth/session";
-import { LEAD_STAGES, LEAD_STAGE_LABELS } from "@/lib/types/crm";
+import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_TEXT_MAX_LENGTH } from "@/lib/types/crm";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,11 +30,11 @@ export async function CreateLeadForm({
         <h2 className={sectionTitle}>Lead information</h2>
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
-          <Input id="name" name="name" placeholder="Contact person" required />
+          <Input id="name" name="name" placeholder="Contact person" maxLength={LEAD_TEXT_MAX_LENGTH} required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="business_name">Address</Label>
-          <Input id="business_name" name="business_name" placeholder="Clinic / shop, city" required />
+          <Input id="business_name" name="business_name" placeholder="Clinic / shop, city" maxLength={LEAD_TEXT_MAX_LENGTH} required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>

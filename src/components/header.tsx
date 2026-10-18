@@ -10,6 +10,9 @@ import BottomNav from "@/components/bottom-nav";
 import { createClient } from "@/lib/supabase/server";
 import { getTodayDateString } from "@/lib/auth/attendance";
 import { getTodayCallsCount } from "@/lib/crm/today-calls";
+import { getUnreadNotificationCount } from "@/lib/notifications/actions";
+import { PushInit } from "@/components/push-init";
+import { PushPrompt } from "@/components/notifications/push-prompt";
 
 function formatDisplayName(name?: string | null, email?: string | null) {
   if (name && name.trim() !== "") return name;
@@ -32,7 +35,10 @@ export default async function Header() {
 
   const supabase = createClient();
   const today = getTodayDateString();
-  const todayCalls = await getTodayCallsCount(profile.id);
+  const [todayCalls, unreadNotifications] = await Promise.all([
+    getTodayCallsCount(profile.id),
+    getUnreadNotificationCount(profile.id),
+  ]);
   const { data: coldCallTask, error: coldCallError } = await supabase
     .from("tasks")
     .select("status, mandatory_target_count")
@@ -52,14 +58,15 @@ export default async function Header() {
 
   return (
     <>
-      <Sidebar todayCalls={todayCalls} />
+      <Sidebar todayCalls={todayCalls} unreadNotifications={unreadNotifications} />
+      <PushInit userId={profile.id} />
       <header
         className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-card lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <SidebarClient profile={{ id: profile.id, name: displayName, role: profile.role, email: profile.email, dashboardPath, todayCalls }} />
+            <SidebarClient profile={{ id: profile.id, name: displayName, role: profile.role, email: profile.email, dashboardPath, todayCalls, unreadNotifications }} />
             <Link href={dashboardPath} className="text-base font-semibold lg:hidden">
               Agency OS
             </Link>
@@ -80,6 +87,8 @@ export default async function Header() {
           </div>
         </div>
       </header>
+
+      <PushPrompt />
 
       {coldCallTask && !coldCallSubmitted && (
         <div className="lg:ml-[var(--sidebar-w)] transition-[margin-left] duration-300 ease-in-out sticky top-14 z-20 relative overflow-hidden border-b border-red-200 bg-red-50 px-3 py-1.5">

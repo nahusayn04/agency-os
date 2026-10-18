@@ -11,6 +11,10 @@ export type LeadStage =
 // Assignee can only be changed while a lead is in one of these stages.
 // From "interested" onward it's permanent (enforced again at the DB
 // level by the lead_assignee_lock trigger, see migration 026).
+// Lead name and address (the business_name column) are capped at this many
+// characters in every form, the bulk import and the server actions.
+export const LEAD_TEXT_MAX_LENGTH = 35;
+
 export const ASSIGNEE_CHANGEABLE_STAGES: LeadStage[] = ["new_lead", "call_pending"];
 
 export interface MeetingHistoryEntry {

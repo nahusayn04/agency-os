@@ -10,6 +10,7 @@ import {
   ASSIGNEE_CHANGEABLE_STAGES,
   LEAD_STAGES,
   LEAD_STAGE_LABELS,
+  LEAD_TEXT_MAX_LENGTH,
   type LeadStage,
 } from "@/lib/types/crm";
 import {
@@ -79,7 +80,13 @@ export function LeadEditForm({
     <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
-        <Input id="name" name="name" defaultValue={lead.name} required />
+        <Input
+          id="name"
+          name="name"
+          defaultValue={lead.name}
+          maxLength={LEAD_TEXT_MAX_LENGTH}
+          required
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="business_name">Address</Label>
@@ -87,6 +94,7 @@ export function LeadEditForm({
           id="business_name"
           name="business_name"
           defaultValue={lead.business_name ?? ""}
+          maxLength={LEAD_TEXT_MAX_LENGTH}
         />
       </div>
       <div className="space-y-2">

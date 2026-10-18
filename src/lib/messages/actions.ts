@@ -229,9 +229,11 @@ export async function getLatestNotifications() {
 
   const { data, error } = await supabase
     .from("notifications")
-    .select("id, title, message, is_read, link, created_at, type, reference_id")
+    .select(
+      "id, title, message, is_read, link, created_at, updated_at, type, reference_id, priority, item_count, needs_action"
+    )
     .eq("user_id", profile.id)
-    .order("created_at", { ascending: false })
+    .order("updated_at", { ascending: false })
     .limit(10);
 
   if (error) {
@@ -298,7 +300,9 @@ export async function clearAllNotifications() {
   const { error } = await supabase
     .from("notifications")
     .delete()
-    .eq("user_id", profile.id);
+    .eq("user_id", profile.id)
+    // Lead reminders waiting for action stay until the lead is actioned.
+    .eq("needs_action", false);
 
   if (error) {
     console.error("Failed to clear notifications:", error.message);

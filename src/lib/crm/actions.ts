@@ -11,6 +11,7 @@ import {
   ASSIGNEE_CHANGEABLE_STAGES,
   LEAD_STAGES,
   LEAD_STAGE_LABELS,
+  LEAD_TEXT_MAX_LENGTH,
   type LeadEditableField,
   type LeadStage,
   type MeetingHistoryEntry,
@@ -95,6 +96,15 @@ export async function createLeadAction(formData: FormData) {
 
   if (!nameInput || !businessName || !phone) {
     return { error: "Name, address and phone are required." };
+  }
+
+  if (
+    nameInput.length > LEAD_TEXT_MAX_LENGTH ||
+    businessName.length > LEAD_TEXT_MAX_LENGTH
+  ) {
+    return {
+      error: `Name and address can be at most ${LEAD_TEXT_MAX_LENGTH} characters each.`,
+    };
   }
 
   if (phone.replace(/\D/g, "").length < 10) {
@@ -251,6 +261,12 @@ export async function updateLeadStageAction(
       link: `/crm/${leadId}`,
       type: "lead_stage_change",
       referenceId: leadId,
+      group: {
+        key: "lead-stage-mine",
+        mode: "count",
+        title: (n) => `${n} leads updated`,
+        message: (n) => `Stage changed on ${n} of your leads.`,
+      },
     });
   }
 
@@ -272,6 +288,12 @@ export async function updateLeadStageAction(
           link: `/crm/${leadId}`,
           type: "lead_stage_change",
           referenceId: leadId,
+          group: {
+            key: "lead-stage-founder",
+            mode: "count",
+            title: (n) => `${n} lead stages updated`,
+            message: (n) => `Stage changed on ${n} leads.`,
+          },
         }
       );
     }
@@ -557,6 +579,12 @@ export async function updateLeadAssigneeAction(
       link: `/crm/${leadId}`,
       type: "lead_reassigned",
       referenceId: leadId,
+      group: {
+        key: "lead-assigned-to-me",
+        mode: "count",
+        title: (n) => `${n} leads assigned to you`,
+        message: (n) => `${n} new leads were assigned to you.`,
+      },
     });
   }
 
@@ -576,6 +604,12 @@ export async function updateLeadAssigneeAction(
           link: `/crm/${leadId}`,
           type: "lead_reassigned",
           referenceId: leadId,
+          group: {
+            key: "lead-reassigned-founder",
+            mode: "count",
+            title: (n) => `${n} leads reassigned`,
+            message: (n) => `${n} leads were reassigned.`,
+          },
         }
       );
     }
@@ -656,6 +690,18 @@ export async function updateLeadAction(
     } else {
       const val =
         rawValue === null || rawValue === "" ? null : String(rawValue);
+      // Older leads may already be longer than the limit; they can still be
+      // edited as long as this particular field is left unchanged.
+      if (
+        (field === "name" || field === "business_name") &&
+        val !== null &&
+        val.length > LEAD_TEXT_MAX_LENGTH &&
+        val !== lead[field as keyof typeof lead]
+      ) {
+        return {
+          error: `Name and address can be at most ${LEAD_TEXT_MAX_LENGTH} characters each.`,
+        };
+      }
       dbUpdates[field] = val;
       newValue = serializeValue(val);
     }

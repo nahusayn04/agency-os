@@ -4,10 +4,10 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
-import { LayoutDashboard, ClipboardList, CheckSquare, BookUser, Mail, FileText, CalendarCheck, BarChart2, Target, Users, Wallet, PhoneCall, X, Menu, Receipt } from "lucide-react";
+import { LayoutDashboard, ClipboardList, CheckSquare, BookUser, Mail, FileText, CalendarCheck, BarChart2, Target, Users, Wallet, PhoneCall, X, Menu, Receipt, Bell } from "lucide-react";
 
 export default function SidebarClient({ profile }: {
-  profile: { id: string; name: string; role: string; email?: string; dashboardPath: string; todayCalls?: number }
+  profile: { id: string; name: string; role: string; email?: string; dashboardPath: string; todayCalls?: number; unreadNotifications?: number }
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -86,6 +86,7 @@ export default function SidebarClient({ profile }: {
           <NavItem href="/my-tasks" icon={CheckSquare} label="My Tasks" />
           <NavItem href="/crm/today" icon={PhoneCall} label="Today's Calls" badge={profile.todayCalls} />
           <NavItem href="/crm" icon={BookUser} label="CRM" />
+          <NavItem href="/notifications" icon={Bell} label="Notifications" badge={profile.unreadNotifications} />
           <NavItem href="/messages" icon={Mail} label="Messages" />
           <NavItem href="/reports" icon={FileText} label="Reports" />
 

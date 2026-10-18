@@ -5,6 +5,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { requireUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { LEAD_TEXT_MAX_LENGTH } from "@/lib/types/crm";
 
 export type ImportRow = { name: string; phone: string; address: string };
 
@@ -68,9 +69,9 @@ export async function importLeadsAction(rows: ImportRow[]): Promise<ImportResult
   }> = [];
 
   for (const r of rows) {
-    const name = String(r?.name ?? "").trim().slice(0, 120);
+    const name = String(r?.name ?? "").trim().slice(0, LEAD_TEXT_MAX_LENGTH);
     const phone = last10(String(r?.phone ?? ""));
-    const address = String(r?.address ?? "").trim().slice(0, 300);
+    const address = String(r?.address ?? "").trim().slice(0, LEAD_TEXT_MAX_LENGTH);
 
     if (!name || phone.length !== 10) {
       invalid += 1;

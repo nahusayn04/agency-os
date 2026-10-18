@@ -1,7 +1,18 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { notifyUser } from "@/lib/notifications/notify";
+import { notifyUser, type NotifyGroup } from "@/lib/notifications/notify";
+
+// A bad day can produce a strike, a fine and an auto-checkout in one go.
+// They are folded into ONE notification per person (new lines are appended,
+// the title shows how many updates it holds) instead of 3-4 separate pings.
+const PENALTY_GROUP: NotifyGroup = {
+  key: "penalty",
+  mode: "append",
+  windowMin: 30,
+  cap: 5,
+  title: (n) => `Strike & fine updates (${n})`,
+};
 
 /** IST-aware date helpers (matches existing attendance.ts convention) */
 function toIST(date: Date): Date {
@@ -186,6 +197,7 @@ export async function addStrike(
       link: "/attendance",
       type: "strike",
       referenceId: strike.id,
+      group: PENALTY_GROUP,
     });
   }
 
@@ -280,6 +292,7 @@ export async function checkAndCreateFine(userId: string): Promise<boolean> {
       link: "/attendance",
       type: "fine",
       referenceId: fine.id,
+      group: PENALTY_GROUP,
     });
 
     created = true;
@@ -330,6 +343,11 @@ export async function removeStrike(
       link: "/attendance",
       type: "strike_removed",
       referenceId: strikeId,
+      group: {
+        key: "strike-removed",
+        mode: "append",
+        title: (n) => `${n} strikes removed`,
+      },
     });
   }
 }
@@ -382,6 +400,7 @@ export async function sweepOverdueFines(): Promise<number> {
           : `Due to missing the fine deadline, you have received ${count} strikes.`,
       link: "/attendance",
       type: "strike",
+      group: PENALTY_GROUP,
     });
   }
 
@@ -613,6 +632,8 @@ export async function sweepMissedCheckouts(): Promise<number> {
       message: "The system automatically checked you out after shift end + 1hr grace period. 1 strike has been issued.",
       link: "/attendance",
       type: "attendance",
+      priority: "urgent",
+      group: PENALTY_GROUP,
     });
 
     processed += 1;
@@ -762,6 +783,8 @@ export async function sweepAbsentUsers(): Promise<number> {
     message: `No check-in was recorded without an approved leave — a fine of ₹${fineAmount} has been issued directly. Deadline: ${deadline}`,
     link: "/attendance",
     type: "attendance",
+    priority: "urgent",
+    group: PENALTY_GROUP,
   });
 
     processed += 1;

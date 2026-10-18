@@ -1,40 +1,35 @@
 import { NextResponse } from "next/server";
-import webpush from "web-push";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { requireUserProfile } from "@/lib/auth/session";
+import { sendPushToUser } from "@/lib/notifications/push";
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+// "Send test notification" button. It only ever sends to the logged-in user's
+// own devices (never to another user), and it bypasses quiet hours on purpose
+// so the person can check that it works.
+export async function POST() {
+  const profile = await requireUserProfile();
 
-export async function POST(req: Request) {
-  try {
-    // This route was reachable with no login check at all — anyone could
-    // push a fake notification to any user. Only allow it now, and only
-    // to the logged-in user themself.
-    const profile = await requireUserProfile();
-    const { title, message, link } = await req.json();
+  const result = await sendPushToUser(
+    profile.id,
+    {
+      title: "Test notification",
+      message: "Notifications are working on this device.",
+      link: "/notifications",
+      tag: "test",
+    },
+    { force: true }
+  );
 
-    const admin = createAdminClient();
-
-    const { data: sub } = await admin
-      .from("push_subscriptions")
-      .select("subscription")
-      .eq("user_id", profile.id)
-      .single();
-
-    if (!sub) return NextResponse.json({ error: "No subscription" }, { status: 404 });
-
-    const payload = JSON.stringify({ title, message, link });
-    await webpush.sendNotification(JSON.parse(sub.subscription), payload);
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
+  if (result.attempted === 0) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed" },
-      { status: 500 }
+      { success: false, error: "No device is registered yet. Turn on notifications first." },
+      { status: 400 }
     );
   }
+  if (result.accepted === 0) {
+    return NextResponse.json(
+      { success: false, error: "The push service did not accept the message. Try turning notifications off and on again." },
+      { status: 502 }
+    );
+  }
+  return NextResponse.json({ success: true, devices: result.accepted });
 }
