@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { animate, motion, useReducedMotion, type Variants } from "framer-motion";
-import { BookUser, Check, CheckSquare, FileText, PhoneCall, Plus, Target, Trash2, Upload, UserPlus } from "lucide-react";
+import { BookUser, Check, CheckSquare, FileText, PhoneCall, Plus, Search, Target, Trash2, Upload, UserPlus } from "lucide-react";
 import { ImportLeadsDialog } from "@/components/crm/import-leads-dialog";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { DateStrip, StepHeader, TimeWheel, buildDate, defaultTimeFor, describeWhen, type TimeState } from "@/components/crm/datetime-steps";
@@ -444,14 +444,24 @@ export function DashboardOverview({
             })}
           </div>
           {canImport && (
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => setImportOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card"
-            >
-              <Upload size={15} /> Import Leads
-            </motion.button>
+            <div className="flex flex-wrap gap-2">
+              <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
+                <Link
+                  href="/crm/find"
+                  className="inline-flex items-center gap-2 rounded-xl border bg-card px-4 py-2 text-sm font-semibold text-primary shadow-card"
+                >
+                  <Search size={15} /> Find Businesses
+                </Link>
+              </motion.div>
+              <motion.button
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => setImportOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card"
+              >
+                <Upload size={15} /> Import Leads
+              </motion.button>
+            </div>
           )}
         </motion.div>
 
