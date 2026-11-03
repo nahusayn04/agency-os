@@ -11,7 +11,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Agency OS",
+  title: "Nextone",
   description: "Workforce management platform",
   manifest: "/manifest.json",
 };

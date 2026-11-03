@@ -1,4 +1,4 @@
-// Agency OS service worker: shows push notifications, confirms delivery,
+// Nextone service worker: shows push notifications, confirms delivery,
 // handles Snooze buttons and keeps the device subscription alive.
 
 self.addEventListener("install", function () {
@@ -19,7 +19,7 @@ self.addEventListener("push", function (event) {
 
   const urgent = data.priority === "urgent";
   const silent = !!data.silent;
-  const title = (urgent ? "\uD83D\uDD34 " : "") + (data.title || "Agency OS");
+  const title = (urgent ? "\uD83D\uDD34 " : "") + (data.title || "Nextone");
 
   const options = {
     body: data.message || "",

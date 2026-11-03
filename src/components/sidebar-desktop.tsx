@@ -117,7 +117,7 @@ export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink
           </div>
           {!collapsed && (
             <Link href={dashboardPath} className="truncate text-base font-semibold text-foreground">
-              Agency OS
+              Nextone
             </Link>
           )}
         </div>

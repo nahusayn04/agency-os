@@ -38,7 +38,7 @@ export function LoginForm({ serverError }: LoginFormProps) {
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
         <CardDescription>
-          Enter your credentials to access Agency OS.
+          Enter your credentials to access Nextone.
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -4,8 +4,9 @@ import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { animate, motion, useReducedMotion, type Variants } from "framer-motion";
-import { BookUser, Check, CheckSquare, FileText, PhoneCall, Plus, Search, Target, Trash2, Upload, UserPlus } from "lucide-react";
+import { BookUser, Check, CheckSquare, FileText, PhoneCall, Plus, Search, Sparkles, Target, Trash2, Upload, UserPlus } from "lucide-react";
 import { ImportLeadsDialog } from "@/components/crm/import-leads-dialog";
+import { AiTalkDialog } from "@/components/ai/ai-talk-dialog";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { DateStrip, StepHeader, TimeWheel, buildDate, defaultTimeFor, describeWhen, type TimeState } from "@/components/crm/datetime-steps";
 import { Button } from "@/components/ui/button";
@@ -410,17 +411,18 @@ export function DashboardOverview({
   cashflow?: { kpis: Kpi[]; months: CashflowMonth[] };
 }) {
   const [importOpen, setImportOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   return (
     <>
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
-        <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
+        <motion.div variants={item} className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+          <div className="contents sm:flex sm:flex-wrap sm:gap-2">
             {todayCalls !== undefined && (
-              <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
+              <motion.div className="order-1 sm:order-none" whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
                 <Link
                   href="/crm/today"
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card"
+                  className="flex w-full items-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3 py-2 text-[13px] font-semibold text-primary-foreground shadow-card sm:inline-flex sm:w-auto sm:gap-2 sm:px-4 sm:text-sm"
                 >
                   <PhoneCall size={15} /> Today&apos;s Calls
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-xs font-bold">
@@ -432,7 +434,7 @@ export function DashboardOverview({
             {quickActions.map((q) => {
               const Icon = ICONS[q.icon];
               return (
-                <motion.div key={q.href + q.label} whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
+                <motion.div key={q.href + q.label} className="order-5 sm:order-none" whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
                   <Link
                     href={q.href}
                     className="inline-flex items-center gap-2 rounded-xl border bg-card px-3.5 py-2 text-xs font-semibold text-primary shadow-card"
@@ -444,11 +446,11 @@ export function DashboardOverview({
             })}
           </div>
           {canImport && (
-            <div className="flex flex-wrap gap-2">
-              <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
+            <div className="contents sm:flex sm:flex-wrap sm:gap-2">
+              <motion.div className="order-3 sm:order-none" whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}>
                 <Link
                   href="/crm/find"
-                  className="inline-flex items-center gap-2 rounded-xl border bg-card px-4 py-2 text-sm font-semibold text-primary shadow-card"
+                  className="flex w-full items-center gap-1.5 whitespace-nowrap rounded-xl border bg-card px-3 py-2 text-[13px] font-semibold text-primary shadow-card sm:inline-flex sm:w-auto sm:gap-2 sm:px-4 sm:text-sm"
                 >
                   <Search size={15} /> Find Businesses
                 </Link>
@@ -457,9 +459,17 @@ export function DashboardOverview({
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => setImportOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card"
+                className="order-2 flex w-full items-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3 py-2 text-[13px] font-semibold text-primary-foreground shadow-card sm:order-none sm:inline-flex sm:w-auto sm:gap-2 sm:px-4 sm:text-sm"
               >
                 <Upload size={15} /> Import Leads
+              </motion.button>
+              <motion.button
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => setAiOpen(true)}
+                className="order-4 flex w-full items-center gap-1.5 whitespace-nowrap rounded-xl border bg-card px-3 py-2 text-[13px] font-semibold text-primary shadow-card sm:order-none sm:inline-flex sm:w-auto sm:gap-2 sm:px-4 sm:text-sm"
+              >
+                <Sparkles size={15} /> AI Talk
               </motion.button>
             </div>
           )}
@@ -539,6 +549,7 @@ export function DashboardOverview({
       </motion.div>
 
       {canImport && <ImportLeadsDialog open={importOpen} onClose={() => setImportOpen(false)} />}
+      {canImport && <AiTalkDialog open={aiOpen} onClose={() => setAiOpen(false)} />}
     </>
   );
 }

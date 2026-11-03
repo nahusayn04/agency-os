@@ -68,7 +68,7 @@ export default async function Header() {
           <div className="flex items-center gap-3">
             <SidebarClient profile={{ id: profile.id, name: displayName, role: profile.role, email: profile.email, dashboardPath, todayCalls, unreadNotifications }} />
             <Link href={dashboardPath} className="text-base font-semibold lg:hidden">
-              Agency OS
+              Nextone
             </Link>
           </div>
           <div className="hidden sm:flex flex-1 justify-center px-4">
