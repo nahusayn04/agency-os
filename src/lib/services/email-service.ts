@@ -114,8 +114,8 @@ export async function sendNotificationFallbackEmail(params: {
   const first = params.items[0];
   const subject =
     params.items.length === 1
-      ? `Nextone: ${first.title}`
-      : `Nextone: ${params.items.length} urgent notifications`;
+      ? `Nexone: ${first.title}`
+      : `Nexone: ${params.items.length} urgent notifications`;
 
   const rows = params.items
     .map((item) => {
@@ -138,7 +138,7 @@ export async function sendNotificationFallbackEmail(params: {
         <p>Hi ${escapeHtml(params.name || "there")},</p>
         <p>This did not reach your phone as a push notification, so we are emailing it too:</p>
         ${rows}
-        <p style="color:#666;font-size:12px">Turn on notifications in Nextone to get these instantly.</p>
+        <p style="color:#666;font-size:12px">Turn on notifications in Nexone to get these instantly.</p>
       </div>
     `,
   });

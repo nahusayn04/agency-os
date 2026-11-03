@@ -1,9 +1,8 @@
-import Link from "next/link";
-import { Search } from "lucide-react";
 import { requireUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { KanbanBoard } from "@/components/crm/kanban-board";
 import { NewLeadDialog } from "@/components/crm/crm-dialogs";
+import { CrmFilterButton, CrmFiltersProvider } from "@/components/crm/crm-filters";
 import { getAssignableUsers } from "@/lib/crm/actions";
 import { LEAD_STAGES } from "@/lib/types/crm";
 
@@ -61,6 +60,7 @@ export default async function CrmPage({
   }));
 
   return (
+    <CrmFiltersProvider>
     <div className="space-y-4">
       {/* Page header: title on the left, "+ New Lead" on the right (opens a
           popup). Members can't create leads, so no button for them. */}
@@ -73,20 +73,18 @@ export default async function CrmPage({
               : "Team leads pipeline"}
           </p>
         </div>
-        {profile.role !== "member" && (
-          <div className="flex items-center gap-2">
-            <Link
-              href="/crm/find"
-              className="inline-flex h-10 items-center gap-2 rounded-xl border bg-card px-3.5 text-xs font-semibold text-primary shadow-card"
-            >
-              <Search size={15} /> Find Businesses
-            </Link>
+        <div className="flex items-center gap-2">
+          <CrmFilterButton
+            assignees={assignableUsers.map((u) => ({ id: u.id, name: u.name }))}
+            canFilterAssignee={profile.role !== "member"}
+          />
+          {profile.role !== "member" && (
             <NewLeadDialog
               users={assignableUsers.map((u) => ({ id: u.id, name: u.name }))}
               currentUserId={profile.id}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {searchParams?.error && (
@@ -103,5 +101,6 @@ export default async function CrmPage({
         currentUserId={profile.id}
       />
     </div>
+    </CrmFiltersProvider>
   );
 }

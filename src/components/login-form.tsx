@@ -38,7 +38,7 @@ export function LoginForm({ serverError }: LoginFormProps) {
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
         <CardDescription>
-          Enter your credentials to access Nextone.
+          Enter your credentials to access Nexone.
         </CardDescription>
       </CardHeader>
       <CardContent>

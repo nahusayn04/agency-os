@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LoginForm } from "@/components/login-form";
 
 const LOGIN_ERRORS: Record<string, string> = {
@@ -21,7 +22,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Nextone</h1>
+        <Image src="/logo.png" alt="Nexone" width={64} height={64} className="mx-auto mb-4 h-16 w-16 rounded-2xl shadow-card" unoptimized />
+        <h1 className="text-2xl font-semibold tracking-tight">Nexone</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Workforce management platform
         </p>

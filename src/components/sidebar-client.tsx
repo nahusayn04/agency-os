@@ -70,7 +70,7 @@ export default function SidebarClient({ profile }: {
               {(profile.name || "A").charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{profile.name || "Nextone"}</p>
+              <p className="truncate text-sm font-semibold">{profile.name || "Nexone"}</p>
               {profile.email && <p className="truncate text-xs text-white/70">{profile.email}</p>}
             </div>
           </div>

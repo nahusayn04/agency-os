@@ -65,7 +65,7 @@ export function NotificationPermission() {
     action = null;
   } else if (status === "needs-install") {
     icon = <Smartphone size={18} className="text-primary" />;
-    title = "Add Nextone to your Home Screen";
+    title = "Add Nexone to your Home Screen";
     body = "On iPhone, notifications work only after you tap Share, then Add to Home Screen, and open the app from there.";
     action = null;
   } else if (status === "unsupported" || status === "not-configured") {

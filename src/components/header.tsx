@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { requireUserProfile } from "@/lib/auth/session";
 import { getDashboardPathForRole } from "@/lib/auth/roles";
@@ -67,8 +68,9 @@ export default async function Header() {
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <SidebarClient profile={{ id: profile.id, name: displayName, role: profile.role, email: profile.email, dashboardPath, todayCalls, unreadNotifications }} />
-            <Link href={dashboardPath} className="text-base font-semibold lg:hidden">
-              Nextone
+            <Link href={dashboardPath} className="flex items-center gap-2 text-base font-semibold lg:hidden">
+              <Image src="/logo.png" alt="" width={28} height={28} className="h-7 w-7 rounded-lg" unoptimized />
+              Nexone
             </Link>
           </div>
           <div className="hidden sm:flex flex-1 justify-center px-4">

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -112,12 +113,10 @@ export default function SidebarDesktop({ dashboardPath, isFounder, showTasksLink
             collapsed ? "justify-center px-2" : "gap-3 px-4"
           }`}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
-            A
-          </div>
+          <Image src="/logo.png" alt="Nexone" width={32} height={32} className="h-8 w-8 shrink-0 rounded-xl" unoptimized />
           {!collapsed && (
             <Link href={dashboardPath} className="truncate text-base font-semibold text-foreground">
-              Nextone
+              Nexone
             </Link>
           )}
         </div>

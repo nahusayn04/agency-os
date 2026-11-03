@@ -29,6 +29,7 @@ import {
   formatSpokeLabel,
 } from "@/components/crm/crm-dialogs";
 import { CallLink } from "@/components/crm/call-link";
+import { useCrmFilters } from "@/components/crm/crm-filters";
 import {
   Select,
   SelectContent,
@@ -66,8 +67,6 @@ interface KanbanBoardProps {
   canReassign: boolean;
   currentUserId: string;
 }
-
-type FollowupFilter = "all" | "overdue" | "due_today" | "not_set";
 
 function getFollowupBucket(iso: string | null): "overdue" | "due_today" | "upcoming" | "not_set" {
   if (!iso) return "not_set";
@@ -934,8 +933,8 @@ export function KanbanBoard({
   const [pending, startTransition] = useTransition();
 
   // --- Global filters (apply across all 6 stages, not per-stage) ---
-  const [assignedToFilter, setAssignedToFilter] = useState<string>("all");
-  const [followupFilter, setFollowupFilter] = useState<FollowupFilter>("all");
+  // Follow-up / assignee filters live in the header funnel dropdown.
+  const { followup: followupFilter, assignedTo: assignedToFilter } = useCrmFilters();
   const [search, setSearch] = useState("");
 
   // --- Bulk selection ---
@@ -1295,13 +1294,6 @@ export function KanbanBoard({
 
   const colors = STAGE_COLORS[activeStage];
 
-  const followupChips: { value: FollowupFilter; label: string }[] = [
-    { value: "all", label: "All" },
-    { value: "due_today", label: "Today" },
-    { value: "overdue", label: "Overdue" },
-    { value: "not_set", label: "Not set" },
-  ];
-
   return (
     <div className="space-y-4">
       {/* Sticky filter bar: search, follow-up chips, assignee, selection
@@ -1325,64 +1317,6 @@ export function KanbanBoard({
                 <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               Select
-            </button>
-          )}
-        </div>
-
-        <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto">
-          {followupChips.map((chip) => {
-            const active = followupFilter === chip.value;
-            return (
-              <button
-                key={chip.value}
-                type="button"
-                onClick={() => setFollowupFilter(chip.value)}
-                className={
-                  "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors " +
-                  (active
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : chip.value === "overdue"
-                    ? "border-red-200 bg-card text-red-600 dark:border-red-800 dark:text-red-400"
-                    : "border-border bg-card text-muted-foreground")
-                }
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-
-          <Select
-            value={assignedToFilter}
-            onValueChange={(value) => setAssignedToFilter(value ?? "all")}
-            items={[
-              { value: "all", label: "All assignees" },
-              ...assignableUsers.map((u) => ({ value: u.id, label: u.name })),
-            ]}
-          >
-            <SelectTrigger className="h-8 shrink-0 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All assignees</SelectItem>
-              {assignableUsers.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {filtersActive && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearch("");
-                setAssignedToFilter("all");
-                setFollowupFilter("all");
-              }}
-              className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-            >
-              Clear
             </button>
           )}
         </div>
