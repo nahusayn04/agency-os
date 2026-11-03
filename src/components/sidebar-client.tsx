@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
@@ -66,9 +67,7 @@ export default function SidebarClient({ profile }: {
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.25rem)" }}
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-lg font-bold">
-              {(profile.name || "A").charAt(0).toUpperCase()}
-            </div>
+            <Image src="/logo.png" alt="Nexone" width={48} height={48} className="h-12 w-12 shrink-0 rounded-full" unoptimized />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{profile.name || "Nexone"}</p>
               {profile.email && <p className="truncate text-xs text-white/70">{profile.email}</p>}

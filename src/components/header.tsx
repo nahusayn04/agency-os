@@ -68,8 +68,7 @@ export default async function Header() {
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <SidebarClient profile={{ id: profile.id, name: displayName, role: profile.role, email: profile.email, dashboardPath, todayCalls, unreadNotifications }} />
-            <Link href={dashboardPath} className="flex items-center gap-2 text-base font-semibold lg:hidden">
-              <Image src="/logo.png" alt="" width={28} height={28} className="h-7 w-7 rounded-lg" unoptimized />
+            <Link href={dashboardPath} className="text-base font-semibold lg:hidden">
               Nexone
             </Link>
           </div>
@@ -80,11 +79,7 @@ export default async function Header() {
             <MobileGlobalSearch />
             <ThemeToggle />
             <NotificationBell userId={profile.id} />
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
-              <span className="text-xs font-semibold">
-                {displayName.charAt(0).toUpperCase()}
-              </span>
-            </div>
+            <Image src="/logo.png" alt="Nexone" width={32} height={32} className="h-8 w-8 rounded-full" unoptimized />
             <span className="hidden text-sm text-white/80 sm:block">{displayName}</span>
           </div>
         </div>

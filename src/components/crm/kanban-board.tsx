@@ -380,7 +380,7 @@ function SpokeChip({
           e.stopPropagation();
           setOpen(true);
         }}
-        className="flex w-full flex-col items-center justify-center rounded-lg bg-accent px-1 py-1.5 text-center text-xs font-semibold text-primary transition-colors disabled:opacity-50"
+        className="flex w-full flex-col items-center justify-center rounded-lg bg-accent/60 px-1 py-1.5 text-center text-xs font-semibold text-primary/80 transition-colors disabled:opacity-50"
       >
         <span>Spoke</span>
         <span className="whitespace-nowrap text-[10px] font-normal leading-tight text-primary/60">
@@ -428,7 +428,7 @@ function CallbackChip({
             ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
             : bucket === "due_today"
               ? "bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
-              : "bg-accent text-primary")
+              : "bg-accent/60 text-primary/80")
         }
       >
         <span>Callback</span>
@@ -696,6 +696,8 @@ function LeadCard({
   selected,
   selectionActive,
   onToggleSelect,
+  focused,
+  onFocus,
 }: {
   lead: KanbanLead;
   onStageChange: (id: string, stage: LeadStage) => void;
@@ -720,6 +722,8 @@ function LeadCard({
   selected: boolean;
   selectionActive: boolean;
   onToggleSelect: (id: string) => void;
+  focused: boolean;
+  onFocus: (id: string) => void;
 }) {
   const assigneeLocked = !ASSIGNEE_CHANGEABLE_STAGES.includes(lead.stage);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -735,13 +739,17 @@ function LeadCard({
   return (
     <div
       {...(canDelete ? longPress : {})}
+      onClickCapture={() => onFocus(lead.id)}
       className={
-        "group relative min-w-0 space-y-3 rounded-2xl border bg-card p-3 shadow-card transition-colors " +
+        "group relative min-w-0 space-y-3 rounded-2xl border bg-card-soft p-3.5 shadow-card transition-colors " +
         (selected
           ? "border-primary bg-accent/40"
           : lead.is_hot_lead
           ? "border-amber-300 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-900/20"
-          : "")
+          : focused
+          ? "border-primary/50 bg-accent/40"
+          : "") +
+        (focused && !selected ? " ring-1 ring-primary/30" : "")
       }
     >
       {/* Selection checkbox: only visible once selection mode is on, and
@@ -795,7 +803,7 @@ function LeadCard({
             leadId={lead.id}
             name={lead.name}
             phone={lead.phone}
-            className="flex items-center justify-center rounded-lg bg-accent py-2 text-primary"
+            className="flex items-center justify-center rounded-lg bg-primary/15 py-2 font-bold text-primary"
           >
             Call
           </CallLink>
@@ -809,7 +817,7 @@ function LeadCard({
             href={"https://wa.me/" + toWhatsappNumber(lead.phone)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center rounded-lg bg-green-50 py-2 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+            className="flex items-center justify-center rounded-lg bg-green-50/70 py-2 text-green-700 dark:bg-green-900/30 dark:text-green-400"
           >
             WhatsApp
           </a>
@@ -930,6 +938,8 @@ export function KanbanBoard({
     setItems(initialLeads);
   }, [initialLeads]);
   const [activeStage, setActiveStage] = useState<LeadStage>(stages[0]);
+  // The card being worked on gets a soft highlight so focus stays on one lead.
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   // --- Global filters (apply across all 6 stages, not per-stage) ---
@@ -1442,7 +1452,12 @@ export function KanbanBoard({
           {filtersActive ? "No leads match these filters." : "No leads in this stage."}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setFocusedId(null);
+          }}
+        >
           {visibleLeads.map((lead) => (
             <LeadCard
               key={lead.id}
@@ -1467,6 +1482,8 @@ export function KanbanBoard({
               selected={selectedIds.has(lead.id)}
               selectionActive={selectionActive}
               onToggleSelect={toggleSelect}
+              focused={focusedId === lead.id}
+              onFocus={setFocusedId}
             />
           ))}
         </div>
