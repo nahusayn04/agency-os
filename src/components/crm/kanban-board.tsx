@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { Send, Star } from "lucide-react";
 import {
   updateLeadStageAction,
   updateLeadAssigneeAction,
@@ -13,6 +13,7 @@ import {
   deleteLeadAction,
   bulkDeleteLeadsAction,
   toggleLeadHotAction,
+  toggleLeadProspectAction,
 } from "@/lib/crm/actions";
 import {
   ASSIGNEE_CHANGEABLE_STAGES,
@@ -33,6 +34,10 @@ import {
 import { CallLink } from "@/components/crm/call-link";
 import { useCrmFilters } from "@/components/crm/crm-filters";
 import { BulkMenu } from "@/components/crm/crm-bulk-menu";
+import {
+  ProspectResearch,
+  type ProspectResearchSaved,
+} from "@/components/crm/prospect-research";
 
 export interface AssignableUser {
   id: string;
@@ -53,6 +58,10 @@ export interface KanbanLead {
   meeting_history: MeetingHistoryEntry[];
   notes: string | null;
   is_hot_lead: boolean;
+  // Prospect research panel (JSONB, only used on Prospects-stage cards)
+  online_presence?: unknown;
+  competitors?: unknown;
+  checklist?: unknown;
   assignee: { id: string; name: string };
 }
 
@@ -379,7 +388,7 @@ function SpokeChip({
         className="flex w-full flex-col items-center justify-center rounded-lg bg-accent/60 px-1 py-1.5 text-center text-xs font-semibold text-primary/80 transition-colors disabled:opacity-50"
       >
         <span>Spoke</span>
-        <span className="whitespace-nowrap text-[10px] font-normal leading-tight text-primary/60">
+        <span className="w-full truncate text-[10px] font-normal leading-tight text-primary/60">
           {formatSpokeLabel(lead.last_contact) || "\u00A0"}
         </span>
       </button>
@@ -428,7 +437,7 @@ function CallbackChip({
         }
       >
         <span>Callback</span>
-        <span className="whitespace-nowrap text-[10px] font-normal leading-tight opacity-60">
+        <span className="w-full truncate text-[10px] font-normal leading-tight opacity-60">
           {formatCallbackButtonLabel(lead.next_followup) || "\u00A0"}
         </span>
       </button>
@@ -681,6 +690,8 @@ function LeadCard({
   onDateChange,
   onNoteChange,
   onToggleHot,
+  onResearchSaved,
+  onToggleProspect,
   onRequestMeetingMove,
   onRequestReschedule,
   onRequestDelete,
@@ -708,6 +719,8 @@ function LeadCard({
   ) => void;
   onNoteChange: (id: string, note: string) => void;
   onToggleHot: (id: string, hot: boolean) => void;
+  onResearchSaved: (id: string, saved: ProspectResearchSaved) => void;
+  onToggleProspect: (id: string, toProspect: boolean) => void;
   onRequestMeetingMove: (leadId: string) => void;
   onRequestReschedule: (leadId: string) => void;
   onRequestDelete: (leadId: string) => void;
@@ -739,14 +752,14 @@ function LeadCard({
       {...(canDelete ? longPress : {})}
       onClickCapture={() => onFocus(lead.id)}
       className={
-        "group relative min-w-0 space-y-3 rounded-2xl border bg-card-soft p-3.5 shadow-card transition-colors " +
+        "group relative min-w-0 space-y-3 rounded-2xl border p-3.5 shadow-card transition-colors " +
         (selected
           ? "border-primary bg-accent/40"
           : lead.is_hot_lead
           ? "border-[#FF6B4A] bg-[#FF6B4A] text-white"
           : focused
           ? "border-primary/50 bg-accent/40"
-          : "") +
+          : "bg-card-soft") +
         (focused && !selected ? " ring-1 ring-primary/30" : "")
       }
     >
@@ -806,34 +819,67 @@ function LeadCard({
           )}
         </div>
         {canSelect && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleHot(lead.id, !lead.is_hot_lead);
-            }}
-            disabled={pending}
-            aria-pressed={lead.is_hot_lead}
-            aria-label={lead.is_hot_lead ? "Remove hot lead" : "Mark as hot lead"}
-            className={
-              "shrink-0 rounded-full p-1.5 transition-colors disabled:opacity-50 " +
-              (lead.is_hot_lead
-                ? "text-white hover:bg-white/20"
-                : "text-muted-foreground hover:bg-accent hover:text-[#FF6B4A]")
-            }
-          >
-            <Star
-              size={18}
-              className={lead.is_hot_lead ? "fill-white" : ""}
-            />
-          </button>
+          <div className="flex shrink-0 items-center">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleProspect(lead.id, lead.stage !== "hot_lead");
+              }}
+              disabled={pending}
+              aria-pressed={lead.stage === "hot_lead"}
+              aria-label={
+                lead.stage === "hot_lead"
+                  ? "Move back from Prospects"
+                  : "Send to Prospects"
+              }
+              title={
+                lead.stage === "hot_lead"
+                  ? "Move back from Prospects"
+                  : "Send to Prospects"
+              }
+              className={
+                "shrink-0 rounded-full p-1.5 transition-colors disabled:opacity-50 " +
+                (lead.stage === "hot_lead"
+                  ? lead.is_hot_lead
+                    ? "bg-white/25 text-white hover:bg-white/35"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : lead.is_hot_lead
+                  ? "text-white hover:bg-white/20"
+                  : "text-muted-foreground hover:bg-accent hover:text-primary")
+              }
+            >
+              <Send size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleHot(lead.id, !lead.is_hot_lead);
+              }}
+              disabled={pending}
+              aria-pressed={lead.is_hot_lead}
+              aria-label={lead.is_hot_lead ? "Remove hot lead" : "Mark as hot lead"}
+              className={
+                "shrink-0 rounded-full p-1.5 transition-colors disabled:opacity-50 " +
+                (lead.is_hot_lead
+                  ? "text-white hover:bg-white/20"
+                  : "text-muted-foreground hover:bg-accent hover:text-[#FF6B4A]")
+              }
+            >
+              <Star
+                size={18}
+                className={lead.is_hot_lead ? "fill-white" : ""}
+              />
+            </button>
+          </div>
         )}
       </div>
 
       {/* Quick actions: Call, WhatsApp, Spoke, Callback */}
       <div
         className={
-          "grid grid-cols-4 gap-1.5 text-center text-xs font-semibold " +
+          "grid grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-1.5 text-center text-xs font-semibold [&>*]:min-w-0 [&>*]:overflow-hidden " +
           (lead.is_hot_lead ? "rounded-xl bg-card p-1.5 text-foreground" : "")
         }
       >
@@ -878,6 +924,19 @@ function LeadCard({
           onSave={(iso, note) => onDateChange(lead.id, "next_followup", iso, note)}
         />
       </div>
+
+      {/* Prospects only: research panel (Online Presence / Competitors / Checklist) */}
+      {lead.stage === "hot_lead" && (
+        <ProspectResearch
+          leadId={lead.id}
+          leadName={lead.name}
+          onlinePresence={lead.online_presence}
+          competitors={lead.competitors}
+          checklist={lead.checklist}
+          onCoral={lead.is_hot_lead}
+          onSaved={(saved) => onResearchSaved(lead.id, saved)}
+        />
+      )}
 
       <button
         type="button"
@@ -1256,6 +1315,37 @@ export function KanbanBoard({
     });
   }
 
+  function handleToggleProspect(leadId: string, toProspect: boolean) {
+    const previous = items;
+
+    if (toProspect) {
+      setItems((cur) =>
+        cur.map((l) =>
+          l.id === leadId ? { ...l, stage: "hot_lead" as LeadStage } : l
+        )
+      );
+    }
+
+    startTransition(async () => {
+      const result = await toggleLeadProspectAction(leadId, toProspect);
+
+      if ("error" in result) {
+        setItems(previous);
+        return;
+      }
+      // Covers the "send back" case, where the target stage comes from the server.
+      setItems((cur) =>
+        cur.map((l) => (l.id === leadId ? { ...l, stage: result.stage } : l))
+      );
+    });
+  }
+
+  function handleResearchSaved(leadId: string, saved: ProspectResearchSaved) {
+    setItems((cur) =>
+      cur.map((l) => (l.id === leadId ? { ...l, ...saved } : l))
+    );
+  }
+
   function handleNoteChange(leadId: string, note: string) {
     const previous = items;
 
@@ -1464,6 +1554,8 @@ export function KanbanBoard({
               onDateChange={handleDateChange}
               onNoteChange={handleNoteChange}
               onToggleHot={handleToggleHot}
+              onResearchSaved={handleResearchSaved}
+              onToggleProspect={handleToggleProspect}
               onRequestMeetingMove={(leadId) =>
                 setMeetingModal({ leadId, mode: "schedule" })
               }

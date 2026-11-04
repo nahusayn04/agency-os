@@ -14,13 +14,35 @@ export default async function CrmPage({
   const profile = await requireUserProfile();
   const supabase = createClient();
 
-  const { data: leads, error } = await supabase
-    .from("leads")
-    .select(
-     "id, name, business_name, phone, deal_value, stage, assigned_to, last_contact, next_followup, meeting_datetime, meeting_note, meeting_history, notes, is_hot_lead"
-    )
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+  const BASE_COLUMNS =
+    "id, name, business_name, phone, deal_value, stage, assigned_to, last_contact, next_followup, meeting_datetime, meeting_note, meeting_history, notes, is_hot_lead";
+  const RESEARCH_COLUMNS = ", online_presence, competitors, checklist";
+
+  type LeadRow = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let leads: LeadRow[] | null = null;
+  let error: { message: string; code?: string } | null = null;
+
+  {
+    const res = await supabase
+      .from("leads")
+      .select(BASE_COLUMNS + RESEARCH_COLUMNS)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    leads = res.data as unknown as LeadRow[] | null;
+    error = res.error;
+  }
+
+  // Migration 029 not applied yet (columns missing): fall back so the CRM
+  // keeps working; the research panel just starts empty until it's run.
+  if (error && error.code === "42703") {
+    const res = await supabase
+      .from("leads")
+      .select(BASE_COLUMNS)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    leads = res.data as unknown as LeadRow[] | null;
+    error = res.error;
+  }
 
   if (error) {
     return (
@@ -53,6 +75,9 @@ export default async function CrmPage({
     meeting_history: lead.meeting_history ?? [],
     notes: lead.notes,
     is_hot_lead: lead.is_hot_lead ?? false,
+    online_presence: lead.online_presence ?? null,
+    competitors: lead.competitors ?? null,
+    checklist: lead.checklist ?? null,
     assignee: {
       id: lead.assigned_to,
       name: userMap.get(lead.assigned_to) ?? "Unknown",

@@ -16,6 +16,14 @@ import {
   type LeadStage,
   type MeetingHistoryEntry,
 } from "@/lib/types/crm";
+import {
+  sanitizeChecklist,
+  sanitizeCompetitors,
+  sanitizeOnlinePresence,
+  type ChecklistItem,
+  type Competitor,
+  type OnlinePresence,
+} from "@/lib/crm/prospect-research";
 
 function serializeValue(value: unknown): string | null {
   if (value === null || value === undefined || value === "") {
@@ -1137,4 +1145,129 @@ export async function getLeadSnapshotAction(
       next_followup: lead.next_followup,
     },
   };
+}
+
+
+/**
+ * Save the Prospect research panel data (Online Presence / Competitors /
+ * Checklist). Any subset of the three can be sent. Same permission rule as
+ * other lead edits: members only on their own leads, admins on any.
+ */
+export async function saveProspectResearchAction(
+  leadId: string,
+  patch: {
+    online_presence?: OnlinePresence;
+    competitors?: Competitor[];
+    checklist?: ChecklistItem[];
+  }
+) {
+  const profile = await requireUserProfile();
+  const supabase = createClient();
+
+  const { data: lead, error: fetchError } = await supabase
+    .from("leads")
+    .select("id, assigned_to")
+    .eq("id", leadId)
+    .is("deleted_at", null)
+    .single();
+
+  if (fetchError || !lead) {
+    return { error: "Lead not found." };
+  }
+
+  if (profile.role === "member" && lead.assigned_to !== profile.id) {
+    return { error: "You can only update your own leads." };
+  }
+
+  const update: Record<string, unknown> = {};
+  if (patch.online_presence !== undefined) {
+    update.online_presence = sanitizeOnlinePresence(patch.online_presence);
+  }
+  if (patch.competitors !== undefined) {
+    update.competitors = sanitizeCompetitors(patch.competitors);
+  }
+  if (patch.checklist !== undefined) {
+    update.checklist = sanitizeChecklist(patch.checklist);
+  }
+
+  if (Object.keys(update).length === 0) {
+    return { success: true };
+  }
+
+  const { error: updateError } = await supabase
+    .from("leads")
+    .update(update)
+    .eq("id", leadId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/crm");
+  return { success: true, saved: update };
+}
+
+
+/**
+ * One-tap "send to Prospects" toggle on a lead card.
+ * - toProspect = true: moves the lead into the Prospects stage (hot_lead).
+ * - toProspect = false: moves it back to the stage it was in before it was
+ *   sent to Prospects (read from the audit trail; falls back to New Lead if
+ *   that can't be determined). Goes through updateLeadStageAction, so the
+ *   permission check, audit row and notifications are identical to a normal
+ *   Move.
+ */
+export async function toggleLeadProspectAction(
+  leadId: string,
+  toProspect: boolean
+): Promise<{ success: true; stage: LeadStage } | { error: string }> {
+  const supabase = createClient();
+
+  const { data: lead, error: fetchError } = await supabase
+    .from("leads")
+    .select("id, stage, meeting_datetime, meeting_note")
+    .eq("id", leadId)
+    .single();
+
+  if (fetchError || !lead) {
+    return { error: "Lead not found." };
+  }
+
+  let target: LeadStage = "hot_lead";
+  let meetingInfo: { datetime: string; note: string } | undefined;
+
+  if (!toProspect) {
+    target = "new_lead";
+
+    const { data: audit } = await supabase
+      .from("lead_audit")
+      .select("old_value")
+      .eq("lead_id", leadId)
+      .eq("field_changed", "stage")
+      .eq("new_value", "hot_lead")
+      .order("changed_at", { ascending: false })
+      .limit(1);
+
+    const prev = audit?.[0]?.old_value as LeadStage | null | undefined;
+    if (prev && prev !== "hot_lead" && LEAD_STAGES.includes(prev)) {
+      if (prev === "meeting") {
+        // Meeting needs a date; reuse the one still on the lead, else New Lead.
+        if (lead.meeting_datetime) {
+          target = "meeting";
+          meetingInfo = {
+            datetime: lead.meeting_datetime,
+            note: lead.meeting_note ?? "",
+          };
+        }
+      } else {
+        target = prev;
+      }
+    }
+  }
+
+  const result = await updateLeadStageAction(leadId, target, meetingInfo);
+  if (result && "error" in result && result.error) {
+    return { error: result.error };
+  }
+  return { success: true, stage: target };
 }
