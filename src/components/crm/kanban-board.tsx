@@ -30,13 +30,7 @@ import {
 } from "@/components/crm/crm-dialogs";
 import { CallLink } from "@/components/crm/call-link";
 import { useCrmFilters } from "@/components/crm/crm-filters";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { BulkMenu } from "@/components/crm/crm-bulk-menu";
 
 export interface AssignableUser {
   id: string;
@@ -1306,8 +1300,8 @@ export function KanbanBoard({
 
   return (
     <div className="space-y-4">
-      {/* Sticky filter bar: search, follow-up chips, assignee, selection
-          toolbar. Stays pinned below the app header while scrolling. */}
+      {/* Sticky bar: search and the 3-dot bulk menu. Stays pinned below
+          the app header while scrolling. */}
       <div className="sticky top-14 z-20 -mx-4 space-y-3 border-b bg-background/95 px-4 pb-3 pt-3 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <input
@@ -1316,88 +1310,20 @@ export function KanbanBoard({
             placeholder="Search name, business, phone"
             className="h-10 w-full rounded-xl border border-input bg-card px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:max-w-sm"
           />
-          {!selectionActive && (
-            <button
-              type="button"
-              onClick={enterSelectionMode}
-              className="ml-auto flex h-10 shrink-0 items-center gap-1.5 rounded-xl border bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
-            >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 11 12 14 20 6" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Select
-            </button>
-          )}
+          <BulkMenu
+            selectionActive={selectionActive}
+            selectedCount={selectedIds.size}
+            pending={pending}
+            stageOptions={stages.map((st) => ({ value: st, label: LEAD_STAGE_LABELS[st] }))}
+            assignees={assignableUsers.map((u) => ({ id: u.id, name: u.name }))}
+            canReassign={canReassign}
+            onEnterSelect={enterSelectionMode}
+            onExitSelect={exitSelectionMode}
+            onMove={(v) => handleBulkMove(v as LeadStage)}
+            onAssign={handleBulkAssign}
+            onDelete={() => setConfirmBulkDelete(true)}
+          />
         </div>
-
-      {/* Bulk selection toolbar */}
-      {selectionActive && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
-          <span className="text-sm font-medium">
-            {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""} selected
-          </span>
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Select
-              disabled={pending}
-              value=""
-              onValueChange={(v) => {
-                if (v) handleBulkMove(v as LeadStage);
-              }}
-            >
-              <SelectTrigger className="text-xs h-auto py-1">
-                <SelectValue placeholder="Move to..." />
-              </SelectTrigger>
-              <SelectContent>
-                {stages.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {LEAD_STAGE_LABELS[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {canReassign && (
-              <Select
-                disabled={pending}
-                value=""
-                onValueChange={(v) => {
-                  if (v) handleBulkAssign(v);
-                }}
-              >
-                <SelectTrigger className="text-xs h-auto py-1">
-                  <SelectValue placeholder="Assign to..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {assignableUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setConfirmBulkDelete(true)}
-              disabled={pending}
-              className="text-xs text-destructive hover:text-destructive/80 border border-destructive/40 rounded-md px-2 py-1 transition-colors disabled:opacity-50"
-            >
-              Delete
-            </button>
-
-            <button
-              type="button"
-              onClick={exitSelectionMode}
-              className="text-xs text-muted-foreground hover:text-foreground border rounded-md px-2 py-1 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
       </div>
 
       {/* Stage tabs */}
