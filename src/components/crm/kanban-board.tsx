@@ -385,7 +385,7 @@ function SpokeChip({
           e.stopPropagation();
           setOpen(true);
         }}
-        className="flex w-full flex-col items-center justify-center rounded-lg bg-accent/60 px-1 py-1.5 text-center text-xs font-semibold text-primary/80 transition-colors disabled:opacity-50"
+        className="flex w-full flex-col items-center justify-center rounded-lg bg-accent/60 px-1 py-1.5 text-center text-xs font-bold text-primary/80 transition-colors disabled:opacity-50"
       >
         <span>Spoke</span>
         <span className="w-full truncate text-[10px] font-normal leading-tight text-primary/60">
@@ -428,7 +428,7 @@ function CallbackChip({
           setOpen(true);
         }}
         className={
-          "flex w-full flex-col items-center justify-center rounded-lg px-1 py-1.5 text-center text-xs font-semibold transition-colors disabled:opacity-50 " +
+          "flex w-full flex-col items-center justify-center rounded-lg px-1 py-1.5 text-center text-xs font-bold transition-colors disabled:opacity-50 " +
           (bucket === "overdue"
             ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
             : bucket === "due_today"
@@ -879,7 +879,7 @@ function LeadCard({
       {/* Quick actions: Call, WhatsApp, Spoke, Callback */}
       <div
         className={
-          "grid grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-1.5 text-center text-xs font-semibold [&>*]:min-w-0 [&>*]:overflow-hidden " +
+          "grid grid-cols-[repeat(auto-fit,minmax(4.25rem,1fr))] gap-1.5 text-center text-xs font-bold [&>*]:min-w-0 [&>*]:overflow-hidden [&>*]:whitespace-nowrap " +
           (lead.is_hot_lead ? "rounded-xl bg-card p-1.5 text-foreground" : "")
         }
       >

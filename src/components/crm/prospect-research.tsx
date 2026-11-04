@@ -94,7 +94,7 @@ export function ProspectResearch({
     <>
       <div
         className={
-          "grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-1.5 " +
+          "grid grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-1.5 " +
           (onCoral ? "rounded-xl bg-card p-1.5" : "")
         }
       >
