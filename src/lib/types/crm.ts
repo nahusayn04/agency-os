@@ -71,7 +71,7 @@ export const LEAD_STAGE_LABELS: Record<LeadStage, string> = {
   new_lead: "New Lead",
   call_pending: "Call Pending",
   interested: "Interested",
-  hot_lead: "Hot Lead",
+  hot_lead: "Prospects",
   meeting: "Meeting",
   negotiation: "Negotiation",
   deal_won: "Deal Won",

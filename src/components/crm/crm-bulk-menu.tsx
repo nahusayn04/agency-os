@@ -71,16 +71,16 @@ export function BulkMenu({
       <button
         ref={btnRef}
         type="button"
-        onClick={toggle}
-        aria-label="More options"
-        aria-expanded={open}
-        className={`relative ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-card transition-colors ${
+        onClick={selectionActive ? toggle : onEnterSelect}
+        aria-label={selectionActive ? "More options" : "Select leads"}
+        aria-expanded={selectionActive ? open : undefined}
+        className={`relative ml-auto flex h-10 shrink-0 items-center justify-center rounded-xl border shadow-card transition-colors ${
           selectionActive
-            ? "border-primary bg-primary/10 text-primary"
-            : "bg-card text-muted-foreground hover:text-primary"
+            ? "w-10 border-primary bg-primary/10 text-primary"
+            : "bg-card px-4 text-sm font-semibold text-muted-foreground hover:text-primary"
         }`}
       >
-        <EllipsisVertical size={18} />
+        {selectionActive ? <EllipsisVertical size={18} /> : "Select"}
         {selectionActive && (
           <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
             {selectedCount}

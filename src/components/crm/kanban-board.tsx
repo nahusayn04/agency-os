@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { Star } from "lucide-react";
 import {
   updateLeadStageAction,
   updateLeadAssigneeAction,
@@ -11,6 +12,7 @@ import {
   rescheduleMeetingAction,
   deleteLeadAction,
   bulkDeleteLeadsAction,
+  toggleLeadHotAction,
 } from "@/lib/crm/actions";
 import {
   ASSIGNEE_CHANGEABLE_STAGES,
@@ -678,6 +680,7 @@ function LeadCard({
   onAssigneeChange,
   onDateChange,
   onNoteChange,
+  onToggleHot,
   onRequestMeetingMove,
   onRequestReschedule,
   onRequestDelete,
@@ -704,6 +707,7 @@ function LeadCard({
     callbackIso?: string
   ) => void;
   onNoteChange: (id: string, note: string) => void;
+  onToggleHot: (id: string, hot: boolean) => void;
   onRequestMeetingMove: (leadId: string) => void;
   onRequestReschedule: (leadId: string) => void;
   onRequestDelete: (leadId: string) => void;
@@ -739,7 +743,7 @@ function LeadCard({
         (selected
           ? "border-primary bg-accent/40"
           : lead.is_hot_lead
-          ? "border-amber-300 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-900/20"
+          ? "border-[#FF6B4A] bg-[#FF6B4A] text-white"
           : focused
           ? "border-primary/50 bg-accent/40"
           : "") +
@@ -781,17 +785,58 @@ function LeadCard({
           {(lead.name || "?").charAt(0).toUpperCase()}
         </Link>
         <div className="min-w-0 flex-1">
-          <Link href={detailHref} className="block truncate text-sm font-semibold">
+          <Link
+            href={detailHref}
+            className={
+              "block truncate text-sm font-semibold " +
+              (lead.is_hot_lead ? "text-white" : "")
+            }
+          >
             {lead.name}
           </Link>
           {lead.business_name && (
-            <p className="truncate text-xs text-muted-foreground">{lead.business_name}</p>
+            <p
+              className={
+                "truncate text-xs " +
+                (lead.is_hot_lead ? "text-white/85" : "text-muted-foreground")
+              }
+            >
+              {lead.business_name}
+            </p>
           )}
         </div>
+        {canSelect && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleHot(lead.id, !lead.is_hot_lead);
+            }}
+            disabled={pending}
+            aria-pressed={lead.is_hot_lead}
+            aria-label={lead.is_hot_lead ? "Remove hot lead" : "Mark as hot lead"}
+            className={
+              "shrink-0 rounded-full p-1.5 transition-colors disabled:opacity-50 " +
+              (lead.is_hot_lead
+                ? "text-white hover:bg-white/20"
+                : "text-muted-foreground hover:bg-accent hover:text-[#FF6B4A]")
+            }
+          >
+            <Star
+              size={18}
+              className={lead.is_hot_lead ? "fill-white" : ""}
+            />
+          </button>
+        )}
       </div>
 
       {/* Quick actions: Call, WhatsApp, Spoke, Callback */}
-      <div className="grid grid-cols-4 gap-1.5 text-center text-xs font-semibold">
+      <div
+        className={
+          "grid grid-cols-4 gap-1.5 text-center text-xs font-semibold " +
+          (lead.is_hot_lead ? "rounded-xl bg-card p-1.5 text-foreground" : "")
+        }
+      >
         {lead.phone ? (
           <CallLink
             leadId={lead.id}
@@ -840,13 +885,23 @@ function LeadCard({
           setExpanded((v) => !v);
         }}
         aria-expanded={expanded}
-        className="-mt-1 text-center text-[11px] text-muted-foreground"
+        className={
+          "-mt-1 text-center text-[11px] " +
+          (lead.is_hot_lead ? "text-white/90" : "text-muted-foreground")
+        }
       >
         {expanded ? "▴ Less" : "▾ More"}
       </button>
 
       {expanded && (
-        <div className="space-y-3 border-t pt-3">
+        <div
+          className={
+            "space-y-3 " +
+            (lead.is_hot_lead
+              ? "rounded-xl bg-card p-3 text-foreground"
+              : "border-t pt-3")
+          }
+        >
           <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
             {assigneeLocked ? (
               <span
@@ -1185,6 +1240,22 @@ export function KanbanBoard({
     });
   }
 
+  function handleToggleHot(leadId: string, hot: boolean) {
+    const previous = items;
+
+    setItems((cur) =>
+      cur.map((l) => (l.id === leadId ? { ...l, is_hot_lead: hot } : l))
+    );
+
+    startTransition(async () => {
+      const result = await toggleLeadHotAction(leadId, hot);
+
+      if (result?.error) {
+        setItems(previous);
+      }
+    });
+  }
+
   function handleNoteChange(leadId: string, note: string) {
     const previous = items;
 
@@ -1392,6 +1463,7 @@ export function KanbanBoard({
               onAssigneeChange={handleAssigneeChange}
               onDateChange={handleDateChange}
               onNoteChange={handleNoteChange}
+              onToggleHot={handleToggleHot}
               onRequestMeetingMove={(leadId) =>
                 setMeetingModal({ leadId, mode: "schedule" })
               }
