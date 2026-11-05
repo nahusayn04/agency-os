@@ -16,7 +16,7 @@ export default async function CrmPage({
 
   const BASE_COLUMNS =
     "id, name, business_name, phone, deal_value, stage, assigned_to, last_contact, next_followup, meeting_datetime, meeting_note, meeting_history, notes, is_hot_lead";
-  const RESEARCH_COLUMNS = ", online_presence, competitors, checklist";
+  const RESEARCH_COLUMNS = ", online_presence, competitors, checklist, category";
 
   type LeadRow = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   let leads: LeadRow[] | null = null;
@@ -78,6 +78,7 @@ export default async function CrmPage({
     online_presence: lead.online_presence ?? null,
     competitors: lead.competitors ?? null,
     checklist: lead.checklist ?? null,
+    category: lead.category ?? null,
     assignee: {
       id: lead.assigned_to,
       name: userMap.get(lead.assigned_to) ?? "Unknown",

@@ -14,6 +14,7 @@ import {
   bulkDeleteLeadsAction,
   toggleLeadHotAction,
   toggleLeadProspectAction,
+  setLeadCategoryAction,
 } from "@/lib/crm/actions";
 import {
   ASSIGNEE_CHANGEABLE_STAGES,
@@ -34,6 +35,13 @@ import {
 import { CallLink } from "@/components/crm/call-link";
 import { useCrmFilters } from "@/components/crm/crm-filters";
 import { BulkMenu } from "@/components/crm/crm-bulk-menu";
+import { CategoryPicker } from "@/components/crm/category-picker";
+import {
+  categoryKey,
+  getLeadCategory,
+  normalizeCategory,
+  OTHER_CATEGORY,
+} from "@/lib/crm/lead-category";
 import {
   ProspectResearch,
   type ProspectResearchSaved,
@@ -62,6 +70,8 @@ export interface KanbanLead {
   online_presence?: unknown;
   competitors?: unknown;
   checklist?: unknown;
+  /** Manual category tag; null = auto-guessed from the name. */
+  category?: string | null;
   assignee: { id: string; name: string };
 }
 
@@ -692,6 +702,7 @@ function LeadCard({
   onToggleHot,
   onResearchSaved,
   onToggleProspect,
+  onCategoryChange,
   onRequestMeetingMove,
   onRequestReschedule,
   onRequestDelete,
@@ -721,6 +732,7 @@ function LeadCard({
   onToggleHot: (id: string, hot: boolean) => void;
   onResearchSaved: (id: string, saved: ProspectResearchSaved) => void;
   onToggleProspect: (id: string, toProspect: boolean) => void;
+  onCategoryChange: (id: string, category: string | null) => void;
   onRequestMeetingMove: (leadId: string) => void;
   onRequestReschedule: (leadId: string) => void;
   onRequestDelete: (leadId: string) => void;
@@ -739,6 +751,7 @@ function LeadCard({
   const assigneeLocked = !ASSIGNEE_CHANGEABLE_STAGES.includes(lead.stage);
   const [moveOpen, setMoveOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [pickingCategory, setPickingCategory] = useState(false);
   const longPress = useLongPress(
     () => {},
     5000,
@@ -938,19 +951,59 @@ function LeadCard({
         />
       )}
 
-      <button
-        type="button"
-        onClick={() => {
-          setExpanded((v) => !v);
-        }}
-        aria-expanded={expanded}
-        className={
-          "-mt-1 text-center text-[11px] " +
-          (lead.is_hot_lead ? "text-white/90" : "text-muted-foreground")
-        }
-      >
-        {expanded ? "▴ Less" : "▾ More"}
-      </button>
+      <div className="-mt-1 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setExpanded((v) => !v);
+          }}
+          aria-expanded={expanded}
+          className={
+            "text-center text-[11px] " +
+            (lead.is_hot_lead ? "text-white/90" : "text-muted-foreground")
+          }
+        >
+          {expanded ? "▴ Less" : "▾ More"}
+        </button>
+
+        {/* Business-type tag (auto-guessed; tap to change) */}
+        {(() => {
+          const tag = getLeadCategory(lead);
+          const chipCls =
+            "h-[18px] max-w-[8rem] truncate rounded-full px-2.5 text-[10px] font-bold leading-[18px] " +
+            (lead.is_hot_lead
+              ? "bg-white text-[#FF6B4A]"
+              : tag === OTHER_CATEGORY
+              ? "bg-accent text-muted-foreground"
+              : "bg-primary text-primary-foreground");
+          return canSelect ? (
+            <button
+              type="button"
+              onClick={() => setPickingCategory(true)}
+              title="Change category"
+              aria-label={"Category: " + tag + ". Tap to change"}
+              className={chipCls + " transition-opacity hover:opacity-85"}
+            >
+              {tag}
+            </button>
+          ) : (
+            <span className={chipCls}>{tag}</span>
+          );
+        })()}
+      </div>
+
+      {pickingCategory && (
+        <CategoryPicker
+          leadName={lead.business_name ? lead.name + " · " + lead.business_name : lead.name}
+          current={getLeadCategory(lead)}
+          isManual={normalizeCategory(lead.category) !== null}
+          onSelect={(c) => {
+            setPickingCategory(false);
+            onCategoryChange(lead.id, c);
+          }}
+          onClose={() => setPickingCategory(false)}
+        />
+      )}
 
       {expanded && (
         <div
@@ -1052,7 +1105,12 @@ export function KanbanBoard({
 
   // --- Global filters (apply across all 6 stages, not per-stage) ---
   // Follow-up / assignee filters live in the header funnel dropdown.
-  const { followup: followupFilter, assignedTo: assignedToFilter } = useCrmFilters();
+  const {
+    followup: followupFilter,
+    assignedTo: assignedToFilter,
+    categories: categoryFilter,
+    setAvailableCategories,
+  } = useCrmFilters();
   const [search, setSearch] = useState("");
 
   // --- Bulk selection ---
@@ -1340,6 +1398,20 @@ export function KanbanBoard({
     });
   }
 
+  function handleCategoryChange(leadId: string, category: string | null) {
+    const previous = items;
+    const value = normalizeCategory(category);
+    setItems((cur) =>
+      cur.map((l) => (l.id === leadId ? { ...l, category: value } : l))
+    );
+    startTransition(async () => {
+      const result = await setLeadCategoryAction(leadId, value);
+      if (result && "error" in result && result.error) {
+        setItems(previous);
+      }
+    });
+  }
+
   function handleResearchSaved(leadId: string, saved: ProspectResearchSaved) {
     setItems((cur) =>
       cur.map((l) => (l.id === leadId ? { ...l, ...saved } : l))
@@ -1429,6 +1501,26 @@ export function KanbanBoard({
     return lead.assignee.id === currentUserId;
   }
 
+  // Tell the header filter which categories exist (with counts).
+  useEffect(() => {
+    const counts = new Map<string, { name: string; count: number }>();
+    for (const l of items) {
+      const name = getLeadCategory(l);
+      const key = categoryKey(name);
+      const cur = counts.get(key);
+      if (cur) cur.count += 1;
+      else counts.set(key, { name, count: 1 });
+    }
+    setAvailableCategories(
+      Array.from(counts.values()).sort(
+        (a, b) =>
+          (a.name === OTHER_CATEGORY ? 1 : 0) - (b.name === OTHER_CATEGORY ? 1 : 0) ||
+          b.count - a.count ||
+          a.name.localeCompare(b.name)
+      )
+    );
+  }, [items, setAvailableCategories]);
+
   const filteredItems = items.filter((l) => {
     if (assignedToFilter !== "all" && l.assignee.id !== assignedToFilter) {
       return false;
@@ -1439,6 +1531,13 @@ export function KanbanBoard({
       if (followupFilter === "not_set" && bucket !== "not_set") return false;
       if (followupFilter === "overdue" && bucket !== "overdue") return false;
       if (followupFilter === "due_today" && bucket !== "due_today") return false;
+    }
+
+    if (
+      categoryFilter.length > 0 &&
+      !categoryFilter.includes(categoryKey(getLeadCategory(l)))
+    ) {
+      return false;
     }
 
     if (search.trim()) {
@@ -1455,7 +1554,10 @@ export function KanbanBoard({
   const visibleLeads = filteredItems.filter((l) => l.stage === activeStage);
 
   const filtersActive =
-    assignedToFilter !== "all" || followupFilter !== "all" || search.trim() !== "";
+    assignedToFilter !== "all" ||
+    followupFilter !== "all" ||
+    categoryFilter.length > 0 ||
+    search.trim() !== "";
 
   const colors = STAGE_COLORS[activeStage];
 
@@ -1556,6 +1658,7 @@ export function KanbanBoard({
               onToggleHot={handleToggleHot}
               onResearchSaved={handleResearchSaved}
               onToggleProspect={handleToggleProspect}
+              onCategoryChange={handleCategoryChange}
               onRequestMeetingMove={(leadId) =>
                 setMeetingModal({ leadId, mode: "schedule" })
               }

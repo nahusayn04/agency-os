@@ -16,6 +16,7 @@ import {
   type LeadStage,
   type MeetingHistoryEntry,
 } from "@/lib/types/crm";
+import { normalizeCategory } from "@/lib/crm/lead-category";
 import {
   sanitizeChecklist,
   sanitizeCompetitors,
@@ -1270,4 +1271,46 @@ export async function toggleLeadProspectAction(
     return { error: result.error };
   }
   return { success: true, stage: target };
+}
+
+
+/**
+ * Set (or clear) the manual category tag of a lead. null / empty = back to the
+ * automatic guess. Same permission rule as other lead edits.
+ */
+export async function setLeadCategoryAction(
+  leadId: string,
+  category: string | null
+) {
+  const profile = await requireUserProfile();
+  const supabase = createClient();
+
+  const { data: lead, error: fetchError } = await supabase
+    .from("leads")
+    .select("id, assigned_to")
+    .eq("id", leadId)
+    .is("deleted_at", null)
+    .single();
+
+  if (fetchError || !lead) {
+    return { error: "Lead not found." };
+  }
+
+  if (profile.role === "member" && lead.assigned_to !== profile.id) {
+    return { error: "You can only update your own leads." };
+  }
+
+  const value = normalizeCategory(category);
+
+  const { error: updateError } = await supabase
+    .from("leads")
+    .update({ category: value })
+    .eq("id", leadId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/crm");
+  return { success: true, category: value };
 }

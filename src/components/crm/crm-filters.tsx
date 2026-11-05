@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -25,6 +26,12 @@ type FiltersCtx = {
   setFollowup: (v: FollowupFilter) => void;
   assignedTo: string;
   setAssignedTo: (v: string) => void;
+  /** Selected category tags (lowercase keys). Empty = all. */
+  categories: string[];
+  toggleCategory: (key: string) => void;
+  /** Categories present in the current leads, with counts (set by the board). */
+  availableCategories: { name: string; count: number }[];
+  setAvailableCategories: (v: { name: string; count: number }[]) => void;
   activeCount: number;
   clear: () => void;
 };
@@ -35,6 +42,19 @@ const Ctx = createContext<FiltersCtx | null>(null);
 export function CrmFiltersProvider({ children }: { children: ReactNode }) {
   const [followup, setFollowup] = useState<FollowupFilter>("all");
   const [assignedTo, setAssignedTo] = useState("all");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategoriesState] = useState<
+    { name: string; count: number }[]
+  >([]);
+
+  const setAvailableCategories = useCallback(
+    (next: { name: string; count: number }[]) => {
+      setAvailableCategoriesState((cur) =>
+        JSON.stringify(cur) === JSON.stringify(next) ? cur : next
+      );
+    },
+    []
+  );
 
   const value = useMemo<FiltersCtx>(
     () => ({
@@ -42,13 +62,24 @@ export function CrmFiltersProvider({ children }: { children: ReactNode }) {
       setFollowup,
       assignedTo,
       setAssignedTo,
-      activeCount: (followup !== "all" ? 1 : 0) + (assignedTo !== "all" ? 1 : 0),
+      categories,
+      toggleCategory: (key) =>
+        setCategories((cur) =>
+          cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]
+        ),
+      availableCategories,
+      setAvailableCategories,
+      activeCount:
+        (followup !== "all" ? 1 : 0) +
+        (assignedTo !== "all" ? 1 : 0) +
+        (categories.length > 0 ? 1 : 0),
       clear: () => {
         setFollowup("all");
         setAssignedTo("all");
+        setCategories([]);
       },
     }),
-    [followup, assignedTo]
+    [followup, assignedTo, categories, availableCategories, setAvailableCategories]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -71,8 +102,17 @@ export function CrmFilterButton({
   assignees: { id: string; name: string }[];
   canFilterAssignee: boolean;
 }) {
-  const { followup, setFollowup, assignedTo, setAssignedTo, activeCount, clear } =
-    useCrmFilters();
+  const {
+    followup,
+    setFollowup,
+    assignedTo,
+    setAssignedTo,
+    categories,
+    toggleCategory,
+    availableCategories,
+    activeCount,
+    clear,
+  } = useCrmFilters();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -118,7 +158,7 @@ export function CrmFilterButton({
               key="panel"
               role="dialog"
               aria-label="Filters"
-              className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72 sm:rounded-2xl"
+              className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-3xl border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72 sm:rounded-2xl"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 12 }}
@@ -177,6 +217,34 @@ export function CrmFilterButton({
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {availableCategories.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Category</p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableCategories.map((c) => {
+                      const key = c.name.toLowerCase();
+                      const active = categories.includes(key);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => toggleCategory(key)}
+                          aria-pressed={active}
+                          className={
+                            "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " +
+                            (active
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-card text-muted-foreground")
+                          }
+                        >
+                          {c.name} <span className="opacity-70">{c.count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
