@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { ExternalLink, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ExternalLink, Plus, Trash2, X } from "lucide-react";
 import { saveProspectResearchAction } from "@/lib/crm/actions";
 import {
   MAX_CHECKLIST_ITEMS,
@@ -68,6 +68,23 @@ export function ProspectResearch({
   const [comps, setComps] = useState(() => readCompetitors(competitors));
   const [items, setItems] = useState(() => readChecklist(checklist));
   const dirtyRef = useRef(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDown(e: MouseEvent | TouchEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [menuOpen]);
 
   const done = items.filter((i) => i.done).length;
 
@@ -87,29 +104,60 @@ export function ProspectResearch({
     setOpen(key);
   }
 
-  const btn =
-    "rounded-lg bg-accent px-1 py-2 text-center text-xs font-semibold text-primary transition-colors hover:bg-accent/70";
+  const itemCls =
+    "block w-full px-3 py-2 text-left text-xs font-semibold text-foreground transition-colors hover:bg-accent";
+
+  function pick(key: PanelKey) {
+    setMenuOpen(false);
+    openPanel(key);
+  }
 
   return (
     <>
       <div
+        ref={menuRef}
         className={
-          "grid grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-1.5 " +
-          (onCoral ? "rounded-xl bg-card p-1.5" : "")
+          "relative " + (onCoral ? "rounded-xl bg-card p-1.5" : "")
         }
       >
-        <button type="button" onClick={() => openPanel("presence")} className={btn}>
-          Online Presence
-        </button>
-        <button type="button" onClick={() => openPanel("competitors")} className={btn}>
-          Competitors
-        </button>
-        <button type="button" onClick={() => openPanel("checklist")} className={btn}>
-          Checklist{" "}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          className="flex w-full items-center justify-center gap-1 rounded-lg bg-accent px-2 py-2 text-xs font-semibold text-primary transition-colors hover:bg-accent/70"
+        >
+          Research
           <span className="font-normal text-muted-foreground">
             {done}/{items.length}
           </span>
+          <ChevronDown
+            size={14}
+            className={"transition-transform " + (menuOpen ? "rotate-180" : "")}
+          />
         </button>
+        {menuOpen && (
+          <div
+            role="menu"
+            className={
+              "absolute z-20 mt-1 overflow-hidden rounded-lg border bg-card shadow-lg " +
+              (onCoral ? "left-1.5 right-1.5" : "left-0 right-0")
+            }
+          >
+            <button type="button" role="menuitem" onClick={() => pick("presence")} className={itemCls}>
+              Online Presence
+            </button>
+            <button type="button" role="menuitem" onClick={() => pick("competitors")} className={itemCls + " border-t"}>
+              Competitors
+            </button>
+            <button type="button" role="menuitem" onClick={() => pick("checklist")} className={itemCls + " border-t"}>
+              Checklist{" "}
+              <span className="font-normal text-muted-foreground">
+                {done}/{items.length}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {open && (
@@ -617,6 +665,8 @@ function ChecklistPanel({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // Only one question is open at a time; the rest are collapsed.
+  const [activeId, setActiveId] = useState<string | null>(items[0]?.id ?? null);
   const latest = useRef(items);
   latest.current = items;
 
@@ -661,6 +711,8 @@ function ChecklistPanel({
         <ChecklistRow
           key={item.id}
           item={item}
+          active={item.id === activeId}
+          onActivate={() => setActiveId(item.id)}
           onToggle={() => update(item.id, { done: !item.done })}
           onSaveAnswer={(answer) => update(item.id, { answer })}
           onSaveQuestion={(heading, question) =>
@@ -675,11 +727,15 @@ function ChecklistPanel({
           submitLabel="Add Question"
           onCancel={() => setAdding(false)}
           onSubmit={async (heading, question) => {
+            const nid = newId();
             const ok = await commit([
               ...latest.current,
-              { id: newId(), heading, question, answer: "", done: false },
+              { id: nid, heading, question, answer: "", done: false },
             ]);
-            if (ok) setAdding(false);
+            if (ok) {
+              setAdding(false);
+              setActiveId(nid);
+            }
             return ok;
           }}
         />
@@ -771,12 +827,16 @@ function QuestionForm({
 
 function ChecklistRow({
   item,
+  active,
+  onActivate,
   onToggle,
   onSaveAnswer,
   onSaveQuestion,
   onDelete,
 }: {
   item: ChecklistItem;
+  active: boolean;
+  onActivate: () => void;
   onToggle: () => void;
   onSaveAnswer: (answer: string) => Promise<boolean>;
   onSaveQuestion: (heading: string, question: string) => Promise<boolean>;
@@ -787,6 +847,49 @@ function ChecklistRow({
   const [answer, setAnswer] = useState(item.answer);
   const [savingAnswer, setSavingAnswer] = useState(false);
   const answerDirty = answer !== item.answer;
+
+  // Closing a row (another one opened) hides its answer box and edit form.
+  useEffect(() => {
+    if (!active) {
+      setShowAnswer(false);
+      setEditing(false);
+    }
+  }, [active]);
+
+  if (!active) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onActivate}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onActivate();
+          }
+        }}
+        className="flex cursor-pointer items-center gap-2.5 rounded-xl border bg-card-soft p-3 opacity-60 transition-opacity hover:opacity-100"
+      >
+        <input
+          type="checkbox"
+          checked={item.done}
+          onClick={(e) => e.stopPropagation()}
+          onChange={onToggle}
+          aria-label={"Mark " + (item.heading || "question") + " as discussed"}
+          className="h-4 w-4 shrink-0 cursor-pointer accent-[hsl(var(--primary))]"
+        />
+        <p
+          className={
+            "min-w-0 flex-1 truncate text-sm font-semibold " +
+            (item.done ? "text-muted-foreground line-through" : "")
+          }
+        >
+          {item.heading || item.question || "Question"}
+        </p>
+        <ChevronDown size={14} className="shrink-0 text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (editing) {
     return (
